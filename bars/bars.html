@@ -1,0 +1,132 @@
+<nhtml>
+<head>
+   <title> Bars Test </title>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
+   <script src="bars3.js"></script>
+   <style>
+   body {
+      font-family: Tahoma;
+      font-size: 1rem;
+   }
+
+   code {
+      background-color: #F3F3F3;
+      display:block;
+      padding: 0.5em;
+      border-radius: 8;
+      border-style: solid;
+      border-color: #CCC;
+      border-width: 1;
+      font-size: 0.8rem;
+   }
+
+   span {
+      border-width: 0;
+      border-style: solid;
+      border-color: #0F0F0F;
+   }
+
+   .debug {
+      font-size: 0.65rem;
+   }
+
+   .axis {
+      font-size: 0.75rem;
+      color: #AAAAAA;
+   }
+
+   .axis path,
+   .axis line {
+       fill: none;
+       stroke: #AAAAAA;
+       shape-rendering: crispEdges;
+   }
+
+   </style>
+</head>
+<body style="margin:2.5em">
+<div>
+    <span style="display:inline-block; margin-right:4em; vertical-align:top">
+       <pre><code id="xyz_text">
+   var simpleOrig = [ 20, 30, 15, 20, 30, 30, 15, 60, 60, 99, 70, 112];
+   var simpleCurr = [ 30, 10, 20, 20, 15, 15, 50, 15,  0, 30, 30, 10];
+   var barTest = new dcc.BarChart(simpleOrig, simpleOrig, {'axis':'static'});
+   barTest.render( d3.select('#xyz').node() );
+       </code></pre>
+    </span>
+    <span id="xyz" style="display:inline-block"></span>
+
+    <hr>
+    <span id="xyz2" style="display:inline-block;vertical-align:top"></span>
+    <span style="display:inline-block; margin-right:4em">
+       <pre><code id="xyz_text2">
+   var config2 = {
+     height: 250,
+     barSpacing: 2,
+     title: 'Custom mappings',
+     rescaleAxis: false,
+     maxDisplay: 10,
+     mapFunc: function(d, i) {
+       return {
+         key: d.label,
+         value: d.val,
+         label: d.label + '(' + (i+1) + ')',
+         colourFill: '#FFDD00'
+       };
+     },
+     totalFunc: function( data ) { return 11; },
+     clickFunc: function(d) { d3.event.stopPropagation(); alert('clicked ' + d.key); }
+   };
+
+   var objOrig = [ 
+     {label: 1, val: 60}, 
+     {label: 2, val:40}, 
+     {label: 3, val:30},
+     {label: 4, val:30},
+     {label: 5, val:31},
+     {label: 6, val:32},
+     {label: 7, val:33},
+     {label: 8, val:34},
+     {label: 9, val:35},
+     {label: 10, val:36},
+     {label: 11, val:37},
+     {label: 12, val:38},
+     {label: 13, val:39},
+     {label: 14, val:40},
+     {label: 15, val:41},
+     {label: 16, val:42},
+     {label: 17, val:43}
+   ];
+
+   var objCurr = objOrig;
+
+   var barTest2 = new dcc.BarChart(objOrig, objOrig, config2);
+   barTest2.render( d3.select('#xyz2').node() );
+
+       </code></pre>
+    </span>
+
+</div>
+</body>
+<script>
+   eval( d3.select('#xyz_text').node().textContent );
+   eval( d3.select('#xyz_text2').node().textContent );
+
+
+   var flag = -1;
+   
+   document.onclick = function() {
+     if (flag) {
+       barTest.update( simpleCurr );
+       barTest2.update( objCurr );
+     } else {
+       barTest.update( simpleOrig );
+       barTest2.update( objOrig );
+     }
+     flag = !flag;
+   };
+   
+</script>
+</html>
+
