@@ -1,0 +1,101 @@
+<html>
+<head>
+<!--
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.js"></script>
+-->
+<script src="d3.js" charset="utf-8"></script>
+<script src="lodash.js"></script>
+<script src="parallelpipe.js"></script>
+</head>
+<body>
+<!--
+<svg id="canvas" width="800" height="200"></svg>
+-->
+<div id="parallel"></div>
+<style>
+body {
+   background-color: #F8F8F8;
+   margin: 2rem;
+   font-family: Tahoma;
+   font-size: 0.6rem;
+}
+</style>
+</body>
+<script>
+
+var data = [
+   {'name': 'KRAS',
+    'value': 350,
+    'data': [
+      {id: 'Proj01', value: 100},
+      {id: 'Proj02', value: 100},
+      {id: 'Proj03', value: 100},
+      {id: 'Proj04', value: 50}
+   ]},
+
+   {'name': 'TTN',
+    'value': 180,
+    'data': [
+      {id: 'Proj02', value: 80},
+      {id: 'Proj04', value: 70},
+      {id: 'Proj01', value: 20},
+      {id: 'Proj03', value: 10}
+   ]},
+
+   {'name': 'PDCH-2',
+    'value': 100,
+    'data': [
+      {id: 'Proj02', value: 40},
+      {id: 'Proj04', value: 30},
+      {id: 'Proj01', value: 20},
+      {id: 'Proj03', value: 10}
+   ]},
+
+   {'name': 'PDCH-1',
+    'value': 140,
+    'data': [
+      {id: 'Proj04', value: 80},
+      {id: 'Proj02', value: 30},
+      {id: 'Proj01', value: 20},
+      {id: 'Proj03', value: 10}
+   ]},
+
+   {'name': 'TP53',
+    'value': 180,
+    'data': [
+      {id: 'Proj03', value: 80},
+      {id: 'Proj02', value: 70},
+      {id: 'Proj01', value: 20},
+      {id: 'Proj04', value: 10}
+   ]},
+
+  
+   {'name':'Site',
+    'type': 'categorical',
+    'value': 0,
+    'data': [
+      {id: 'Proj03', value: 'B'},
+      {id: 'Proj01', value: 'A'},
+      {id: 'Proj02', value: 'C'},
+      {id: 'Proj04', value: 'B'}
+   ]},
+
+   {'name': 'LRP1B',
+    'value': 40,
+    'data': [
+      {id: 'Proj01', value: 20},
+      {id: 'Proj02', value: 10},
+      {id: 'Proj03', value: 10},
+      {id: 'Proj04', value: 0}
+   ]},
+ 
+   
+];
+
+var parallel = new dcc.ParallelPipe(data, null);
+parallel.render( d3.select('#parallel').node() );
+
+
+</script>
+</html>
