@@ -95,7 +95,7 @@
 
 
 
-  ParallelPipe.prototype.renderDataLinks2 = function( element ) {
+  ParallelPipe.prototype.renderDataLinks2 = function( element, computeOnly ) {
     var _this = this;
     var config = _this.config;
     // var links = _this.chart.append('g');
@@ -104,6 +104,38 @@
 
       // TODO: ab-initio
       if (columnIdx === 0) {
+        _this.data[0].data.forEach(function(currentItem) {
+          var x1 = currentItem.px;
+          var y1 = currentItem.py;
+          var x2 = currentItem.px;
+          var y2 = currentItem.py;
+
+          currentItem.diagonalData = {
+            source: { x: x1, y: y1 },
+            target: { x: x2, y: y2 }
+          };
+        });
+
+        if (computeOnly === true) return;
+
+        _this.links.selectAll('.' + _this.data[0].name + '-path')
+          .data(_this.data[0].data)
+          .enter()
+          .append('path')
+          .attr('class', function(d) {
+            return _this.data[0].name + ' ' +
+              d.id + ' ' +
+              _this.data[0].name + '-path';
+          })
+          .attr('d', function(d) {
+            return _this.diagonal2(d.diagonalData);
+          })
+          .style({
+            'fill': 'none',
+            'stroke': '#CCC',
+            'stroke-width': 1
+          });
+
         return;
       }
 
@@ -128,23 +160,32 @@
         } else {
           x2 += config.barWidth;
         }
-
-        var diagonalData = {
+        currentItem.diagonalData = {
           source: { x: x1, y: y1 },
           target: { x: x2, y: y2 }
         };
-
-        _this.links.append('path')
-          .classed(currentItem.id, true)
-          .datum(diagonalData)
-          .attr('d', _this.diagonal2)
-          .style({
-            'fill': 'none',
-            'stroke': '#CCC',
-            'stroke-width': 1
-          });
-
       });
+
+      if (computeOnly === true) return;
+
+      _this.links.selectAll('.' + currentCol.name + '-path')
+        .data(currentCol.data)
+        .enter()
+        .append('path')
+        .attr('class', function(d) {
+          return currentCol.name + ' ' +
+            d.id + ' ' +
+            currentCol.name + '-path';
+        })
+        .attr('d', function(d) {
+          return _this.diagonal2(d.diagonalData);
+        })
+        .style({
+          'fill': 'none',
+          'stroke': '#CCC',
+          'stroke-width': 1
+        });
+
 
     });
   };
@@ -170,17 +211,18 @@ console.log('in swap ', col1 + ' with ' + col2);
         return d.name === col2;
       }).attr('transform'));
 
-console.log(trans1.translate);
-console.log(trans2.translate);
+//console.log(trans1.translate);
+//console.log(trans2.translate);
 
-    d3.selectAll('path').remove();
+    var tDuration = 1200;
+
 
     _this.chart.selectAll('.parallel-column')
       .filter(function(d) {
         return d.name === col2;
       })
       .transition()
-      .duration(600)
+      .duration(tDuration)
       .attr('transform', function(d) {
         return _this.translate(trans1.translate[0], trans1.translate[1]);
       });
@@ -190,27 +232,86 @@ console.log(trans2.translate);
         return d.name === col1;
       })
       .transition()
-      .duration(600)
+      .duration(tDuration)
       .attr('transform', function(d) {
         return _this.translate(trans2.translate[0], trans2.translate[1]);
       });
 
 
-    // Adjust
-    _this.data[idx].data.forEach(function(item) {
-      item.px -= size;
-    });
-    _this.data[idx-1].data.forEach(function(item) {
-      item.px += size;
-    });
-
     var temp = _this.data[idx];
     _this.data[idx] = _this.data[idx-1];
     _this.data[idx-1] = temp;
 
-    _this.renderDataLinks2(_this.element);
-   
+
+    // d3.selectAll('path').remove();
+    _this.computeLayout(_this.element);
+    _this.renderDataLinks2(_this.element, true);
+
+    var diagonalData = {
+      source: { x: 0, y: 0 },
+      target: { x: 0, y: 0 }
+    };
+    d3.selectAll('path')
+      .transition()
+      .duration(tDuration)
+      .attr('d', function(d) {
+        return _this.diagonal2(d.diagonalData);
+      });
+
   };
+
+
+  ParallelPipe.prototype.computeLayout = function( element ) {
+    var _this = this;
+    var config = _this.config;
+    var size = config.barWidth + config.hspacing;
+
+    var hSize = config.histogramHeight + config.histogramPadding;
+
+    _this.data.forEach(function(columnData, columnIdx) {
+      var data = columnData.data;
+
+      if (columnData.type && columnData.type === 'categorical') {
+        // 1) Find uniques
+        var uniqueValues = _.unique(_.pluck(columnData.data, 'value')).sort();
+
+        // 2) Figure out layout constraint
+        var gap = (config.chartHeight - hSize) / uniqueValues.length;
+        var offset = 0.5 * gap;
+
+        uniqueValues.forEach(function(category, cidx) {
+          var filtered = _.filter(columnData.data, function(d) {
+            return d.value === category;
+          });
+          filtered.forEach(function(d) {
+            d.px = columnIdx * config.columnSize + 0.5*config.barWidth;
+            d.py = hSize + offset + cidx * gap;
+
+          });
+        });
+      } else if (columnData.type && columnData.type === 'ordinal') {
+        // FIXME: dupe
+        var max = d3.max( _.pluck(columnData.data, 'value'));
+        var min = d3.min( _.pluck(columnData.data, 'value'));
+        var axisPadding = 2;
+        var axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight) - 8;
+        var scale = d3.scale.linear().domain([0, max]).range([axisHeight, 0]);
+
+
+        columnData.data.forEach(function(g, gidx) {
+          g.px = columnIdx * config.columnSize + 0.5*config.barWidth;
+          g.py = hSize + scale(g.value);
+        });
+      } else {
+        columnData.data.forEach(function(g, gidx) {
+          g.px = columnIdx * config.columnSize;
+          g.py = hSize + 0.5*config.barHeight + gidx * (config.barHeight + config.vspacing);
+        });
+      }
+    });
+
+  };
+
 
 
   // FIXME: Scale histogram and bar
@@ -254,9 +355,6 @@ console.log(trans2.translate);
       var group = d3.select(this).append('g')
         .attr('transform', _this.translate(0, config.histogramHeight+config.histogramPadding))
         .append('g');
-        //.selectAll('.parallel-column-data')
-        //.data(data)
-        //.enter().append('g');
 
 
       if (columnData.type && columnData.type === 'categorical') {
@@ -266,18 +364,6 @@ console.log(trans2.translate);
         // 2) Figure out layout constraint
         var gap = (config.chartHeight - hSize) / uniqueValues.length;
         var offset = 0.5 * gap;
-
-        uniqueValues.forEach(function(category, cidx) {
-          var filtered = _.filter(columnData.data, function(d) {
-            return d.value === category;
-          });
-          filtered.forEach(function(d) {
-            d.px = columnIdx * config.columnSize + 0.5*config.barWidth;
-            d.py = hSize + offset + cidx * gap;
-
-          });
-        });
-
 
         uniqueValues.forEach(function(category, cidx) {
           var filtered = _.filter(columnData.data, function(d) {
@@ -296,14 +382,12 @@ console.log(trans2.translate);
         });
 
       } else if (columnData.type && columnData.type === 'ordinal') {
+
         var max = d3.max( _.pluck(columnData.data, 'value'));
         var min = d3.min( _.pluck(columnData.data, 'value'));
-
         var axisPadding = 2;
-        var axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight) - 8; 
-
+        var axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight) - 8;
         var scale = d3.scale.linear().domain([0, max]).range([axisHeight, 0]);
-
 
         group.append('rect')
           .attr('x', config.barWidth * 0.5 - 1)
@@ -311,7 +395,7 @@ console.log(trans2.translate);
           .attr('width', 2)
           .attr('height', axisHeight + 2*axisPadding)
           .style('fill', '#777')
-          .style('stroke', 'none'); 
+          .style('stroke', 'none');
 
         group.append('text')
           .attr('x',  config.barWidth * 0.5 + 5)
@@ -323,25 +407,7 @@ console.log(trans2.translate);
           .attr('y', axisHeight)
           .text(min);
 
-        
-        columnData.data.forEach(function(g, gidx) {
-          g.px = columnIdx * config.columnSize + 0.5*config.barWidth;
-          g.py = hSize + scale(g.value);
-        });
-
-
-        console.log('max/min', max, min, scale(0));
-        console.log('max/min', max, min, scale(1));
-        console.log('max/min', max, min, scale(15));
       } else {
-
-        // Layout - in word space
-        columnData.data.forEach(function(g, gidx) {
-          g.px = columnIdx * config.columnSize;
-          g.py = hSize + 0.5*config.barHeight + gidx * (config.barHeight + config.vspacing);
-        });
-
-
         columnData.data.forEach(function(g, gidx) {
           group.append('rect')
             .datum(g)
@@ -368,26 +434,6 @@ console.log(trans2.translate);
             });
 
         })
-
-        /*
-        group.append('rect')
-          .attr('class', function(d) {
-            return d.id + ' ' + 'parallel-column-data';
-          })
-          .attr('x', 1)
-          .attr('y', function(d, i) {
-            return i * (config.barHeight + config.vspacing);
-          })
-          .attr('width', function(d) {
-            return d.value * 0.1;
-          })
-          .attr('height', config.barHeight)
-          .style({
-            fill: '#48F',
-            stroke: 'none'
-          });
-          */
-
       }
 
 
@@ -402,6 +448,7 @@ console.log(trans2.translate);
   ParallelPipe.prototype.renderDataLabels = function( element ) {
     var _this = this;
     var config = _this.config;
+
     var columns = _this.chart.selectAll('.parallel-column');
 
     // Column names
@@ -421,7 +468,7 @@ console.log(trans2.translate);
       .append('text')
       .classed('series-label', true)
       .attr('transform', function(d, i) {
-         return _this.translate(5, 13 + config.paddingTop + hist + i*s); 
+         return _this.translate(5, 13 + config.paddingTop + hist + i*s);
       })
       .text(function(d) { return d; });
 
@@ -453,8 +500,9 @@ console.log(trans2.translate);
     _this.links = _this.chart.append('g');
 
     // Render components
+    _this.computeLayout(_this.element);
     _this.renderDataBars(_this.element);
-    _this.renderDataLinks2(_this.element);
+    _this.renderDataLinks2(_this.element, false);
     _this.renderDataLabels(_this.element);  // Goes last !!!
 
 
@@ -532,11 +580,24 @@ console.log(trans2.translate);
         _this.svg.selectAll('.debug').remove();
       });
 
+      _this.chart.selectAll('.parallel-column')
+        .on('click', function(d, i) {
+          console.log('....', _this.data);
+          var realIndex = _.findIndex(_this.data, function(d2) {
+            return d.name === d2.name;
+          });
+          console.log('clicked',  i, realIndex, d.name);
+          if (realIndex > 0) {
+            _this.swapColumn(realIndex);
+          }
+        });
 
+      /*
       _this.svg.on('click', function() {
         console.log('clicked');
-        _this.swapColumn(1);
+        _this.swapColumn(4);
       });
+      */
 
 
   };
