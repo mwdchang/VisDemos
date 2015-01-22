@@ -11,15 +11,18 @@
       height: 180,
       margin: 5,
       paddingTop: 5,
-      paddingBottom: 15,
+      paddingBottom: 20,
       paddingLeft: 45,
       paddingRight: 5,
+
+      //histogramHeight: 40,
+      //histogramPadding: 5,
 
       histogramHeight: 40,
       histogramPadding: 5,
 
       hspacing: 25,
-      vspacing: 15,
+      vspacing: 10,
 
 
       // Callback
@@ -92,57 +95,6 @@
 
 
 
-  ParallelPipe.prototype.renderDataLinks = function( element ) {
-    var _this = this;
-    var config = _this.config;
-
-    var links = _this.chart.append('g')
-      .attr('transform', function() {
-        return _this.translate(0, config.histogramHeight + config.histogramPadding);
-      });
-
-    var items = _.pluck(data[0].data, 'id');
-    items.forEach(function(item, itemIdx) {
-
-      var indexList = getIndexList(item, _this.data);
-      for (var i=0; i < indexList.length - 1; i++) {
-
-        var x1 = config.barWidth + i * (config.barWidth + config.hspacing);
-        var x2 = (i+1) * (config.barWidth + config.hspacing);
-        var y1 = (0.5 * config.barHeight) + indexList[i] * (config.barHeight + config.vspacing);
-        var y2 = (0.5 * config.barHeight) + indexList[i+1] * (config.barHeight + config.vspacing);
-
-        var diagnoalData = {
-          source: { x: x1, y:y1},
-          target: { x: x2, y:y2}
-        };
-
-
-        links.append('path')
-          .classed(item, true)
-          .datum( diagnoalData )
-          .attr('d', _this.diagonal2)
-          .style({
-            'fill': 'none',
-            'stroke': '#CCC',
-            'stroke-width': 1
-          });
-
-        /*
-        links.append('line')
-          .classed(item, true)
-          .attr('x1', x1)
-          .attr('y1', y1)
-          .attr('x2', x2)
-          .attr('y2', y2)
-          .attr('stroke-width', 1)
-          .attr('stroke', '#888888'); */
-      }
-    });
-
-  };
-
-
   ParallelPipe.prototype.renderDataLinks2 = function( element ) {
     var _this = this;
     var config = _this.config;
@@ -171,6 +123,8 @@
         // Figure out offset based on current and previous
         if (previousCol.type && previousCol.type === 'categorical') {
           x2 += 0;
+        } else if (previousCol.type && previousCol.type === 'ordinal') {
+          x2 += 0;
         } else {
           x2 += config.barWidth;
         }
@@ -196,6 +150,69 @@
   };
 
 
+  // Experimental
+  ParallelPipe.prototype.swapColumn = function( idx ) {
+    var _this = this;
+    var config = _this.config;
+    var size = config.barWidth + config.hspacing;
+
+    var col1 = _this.data[ idx ].name;
+    var col2 = _this.data[idx-1].name;
+
+console.log('in swap ', col1 + ' with ' + col2);
+    var trans1 = d3.transform(_this.chart.selectAll('.parallel-column')
+      .filter(function(d) {
+        return d.name === col1;
+      }).attr('transform'));
+
+    var trans2 = d3.transform(_this.chart.selectAll('.parallel-column')
+      .filter(function(d) {
+        return d.name === col2;
+      }).attr('transform'));
+
+console.log(trans1.translate);
+console.log(trans2.translate);
+
+    d3.selectAll('path').remove();
+
+    _this.chart.selectAll('.parallel-column')
+      .filter(function(d) {
+        return d.name === col2;
+      })
+      .transition()
+      .duration(600)
+      .attr('transform', function(d) {
+        return _this.translate(trans1.translate[0], trans1.translate[1]);
+      });
+
+    _this.chart.selectAll('.parallel-column')
+      .filter(function(d) {
+        return d.name === col1;
+      })
+      .transition()
+      .duration(600)
+      .attr('transform', function(d) {
+        return _this.translate(trans2.translate[0], trans2.translate[1]);
+      });
+
+
+    // Adjust
+    _this.data[idx].data.forEach(function(item) {
+      item.px -= size;
+    });
+    _this.data[idx-1].data.forEach(function(item) {
+      item.px += size;
+    });
+
+    var temp = _this.data[idx];
+    _this.data[idx] = _this.data[idx-1];
+    _this.data[idx-1] = temp;
+
+    _this.renderDataLinks2(_this.element);
+   
+  };
+
+
   // FIXME: Scale histogram and bar
   ParallelPipe.prototype.renderDataBars = function( element ) {
     var _this = this;
@@ -208,7 +225,10 @@
       .data(_this.data)
       .enter()
       .append('g')
-      .classed('parallel-column', true)
+      .attr('class', function(d) {
+        return 'parallel-column' + ' ' + d.name;
+      })
+      //.classed('parallel-column', true)
       .attr('transform', function(d, i) {
         return _this.translate( i * size, 1);
       });
@@ -233,9 +253,10 @@
       var data = columnData.data;
       var group = d3.select(this).append('g')
         .attr('transform', _this.translate(0, config.histogramHeight+config.histogramPadding))
-        .selectAll('.parallel-column-data')
-        .data(data)
-        .enter().append('g');
+        .append('g');
+        //.selectAll('.parallel-column-data')
+        //.data(data)
+        //.enter().append('g');
 
 
       if (columnData.type && columnData.type === 'categorical') {
@@ -258,48 +279,6 @@
         });
 
 
-        //FIXME: dup
-        /*
-        if (columnIdx > 0) {
-          var prev = _this.data[columnIdx-1].data;
-          var current = columnData.data;
-
-          current.forEach(function(currentItem) {
-            var last = _.find(prev, function(d) {
-              return d.id === currentItem.id;
-            });
-            var x1 = currentItem.px; 
-            var y1 = currentItem.py;
-            var x2 = last.px; 
-            var y2 = last.py;
-
-            var temp = _this.data[columnIdx-1];
-            if (temp.type && temp.type === 'categorical') {
-              x2 += 0.5 * config.barWidth;
-            } else {
-              x2 += config.barWidth;
-            }
-
-
-            var diagonalData = {
-              source: { x: x1, y:y1},
-              target: { x: x2, y:y2}
-            };
-
-            links.append('path')
-              .classed(currentItem.id, true)
-              .datum(diagonalData)
-              .attr('d', _this.diagonal2)
-              .style({
-                'fill': 'none',
-                'stroke': '#CCC',
-                'stroke-width': 1
-              });
-          });
-        }
-        */
-
-
         uniqueValues.forEach(function(category, cidx) {
           var filtered = _.filter(columnData.data, function(d) {
             return d.value === category;
@@ -316,72 +295,81 @@
             .style('fill', '#F9B');
         });
 
+      } else if (columnData.type && columnData.type === 'ordinal') {
+        var max = d3.max( _.pluck(columnData.data, 'value'));
+        var min = d3.min( _.pluck(columnData.data, 'value'));
+
+        var axisPadding = 2;
+        var axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight) - 8; 
+
+        var scale = d3.scale.linear().domain([0, max]).range([axisHeight, 0]);
+
+
+        group.append('rect')
+          .attr('x', config.barWidth * 0.5 - 1)
+          .attr('y', -axisPadding)
+          .attr('width', 2)
+          .attr('height', axisHeight + 2*axisPadding)
+          .style('fill', '#777')
+          .style('stroke', 'none'); 
+
+        group.append('text')
+          .attr('x',  config.barWidth * 0.5 + 5)
+          .attr('y', 0)
+          .text(max);
+
+        group.append('text')
+          .attr('x',  config.barWidth * 0.5 + 5)
+          .attr('y', axisHeight)
+          .text(min);
+
+        
+        columnData.data.forEach(function(g, gidx) {
+          g.px = columnIdx * config.columnSize + 0.5*config.barWidth;
+          g.py = hSize + scale(g.value);
+        });
+
+
+        console.log('max/min', max, min, scale(0));
+        console.log('max/min', max, min, scale(1));
+        console.log('max/min', max, min, scale(15));
       } else {
 
         // Layout - in word space
-        group.each(function(g, gidx) {
-          // g.px = config.barWidth + (columnIdx) * config.columnSize;
+        columnData.data.forEach(function(g, gidx) {
           g.px = columnIdx * config.columnSize;
           g.py = hSize + 0.5*config.barHeight + gidx * (config.barHeight + config.vspacing);
         });
 
 
-        /*
-        if (columnIdx > 0) {
-          var prev = _this.data[columnIdx-1].data;
-          var current = columnData.data;
-
-          current.forEach(function(currentItem) {
-            var last = _.find(prev, function(d) {
-              return d.id === currentItem.id;
+        columnData.data.forEach(function(g, gidx) {
+          group.append('rect')
+            .datum(g)
+            .attr('class', g.id + ' ' + 'parallel-column-data')
+            .attr('x', 1)
+            .attr('y',  gidx * (config.barHeight + config.vspacing))
+            .attr('width', config.barWidth-1)
+            .attr('height', config.barHeight)
+            .style({
+              fill: '#FFFFFF',
+              'fill-opacity': 0,
+              stroke: '#BBB'
             });
-            var x1 = currentItem.px; 
-            var y1 = currentItem.py;
-            var x2 = last.px; 
-            var y2 = last.py;
 
-            var temp = _this.data[columnIdx-1];
-            if (temp.type && temp.type === 'categorical') {
-              x2 += 0;
-            } else {
-              x2 += config.barWidth;
-            }
+          group.append('rect')
+            .attr('class', g.id + ' ' + 'parallel-column-data')
+            .attr('x', 1)
+            .attr('y', gidx * (config.barHeight + config.vspacing))
+            .attr('width',  g.value * 0.1)
+            .attr('height', config.barHeight)
+            .style({
+              fill: '#48F',
+              stroke: 'none'
+            });
 
+        })
 
-            var diagonalData = {
-              source: { x: x1, y:y1},
-              target: { x: x2, y:y2}
-            };
-
-            links.append('path')
-              .classed(currentItem.id, true)
-              .datum(diagonalData)
-              .attr('d', _this.diagonal2)
-              .style({
-                'fill': 'none',
-                'stroke': '#CCC',
-                'stroke-width': 1
-              });
-          });
-        }
-        */
-
-
-        group.append('rect')
-          .attr('class', function(d) {
-            return d.id + ' ' + 'parallel-column-data';
-          })
-          .attr('x', 1)
-          .attr('y', function(d, i) {
-            return i * (config.barHeight + config.vspacing);
-          })
-          .attr('width', config.barWidth-1)
-          .attr('height', config.barHeight)
-          .style({
-            fill: '#FFFFFF',
-            'fill-opacity': 0,
-            stroke: '#BBB'
-          });
+        /*
         group.append('rect')
           .attr('class', function(d) {
             return d.id + ' ' + 'parallel-column-data';
@@ -398,13 +386,12 @@
             fill: '#48F',
             stroke: 'none'
           });
+          */
 
       }
 
 
-
     });
-
   };
 
 
@@ -482,7 +469,7 @@
         _this.svg.append('text')
           .attr('class', 'debug')
           .attr('y', config.chartHeight + 15)
-          .style('font-size', '1rem')
+          .style('font-size', '0.6rem')
           .text(function() {
             var str = '';
             _this.data.forEach(function(col) {
@@ -517,8 +504,8 @@
 
           _this.svg.append('text')
             .attr('class', 'debug')
-            .attr('y', config.chartHeight + 15 + 15*idx)
-            .style('font-size', '1rem')
+            .attr('y', config.chartHeight + 15 + 10*idx)
+            .style('font-size', '0.6rem')
             .text(function() {
               var str = '';
               _this.data.forEach(function(col) {
@@ -546,25 +533,14 @@
       });
 
 
+      _this.svg.on('click', function() {
+        console.log('clicked');
+        _this.swapColumn(1);
+      });
+
+
   };
 
-
-  /**
-   * Given an id, find its position across all the data columns
-   */
-  function getIndexList(id, data) {
-    var result = [];
-    data.forEach(function(column) {
-      var idx = _.findIndex(column.data, function(item) {
-        return item.id === id;
-      });
-      result.push(idx);
-    });
-    return result;
-  }
-
-
   dcc.ParallelPipe = ParallelPipe;
-
 })();
 
