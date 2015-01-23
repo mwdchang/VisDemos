@@ -12,9 +12,9 @@
 <!--
 <svg id="canvas" width="800" height="200"></svg>
 -->
-<pre style="background-color:#CCC; padding:5; border-radius:5"><code>
+<pre style="background-color:#CCC; padding:7; border-radius:5; font-size:0.75rem"><code>
 Click on a column to swap with the column to the left of it <br>
-Shift+Click on a ranked column to sort
+Shift+Click on a ranked column to sort <br>
 </code></pre>
 <div id="parallel"></div>
 <style>
@@ -108,12 +108,92 @@ var data = [
       {id: 'Proj04', value: 350},
       {id: 'Proj05', value: 450}
    ]},
-
-
-
- 
-   
 ];
+
+
+
+var data = [
+   {'name': 'Mutations',
+    'value': 0,
+    'type': 'numeric',
+    'data': [
+      {id: 'Proj01', value: 1500},
+      {id: 'Proj02', value: 110},
+      {id: 'Proj03', value: 300},
+      {id: 'Proj04', value: 200},
+      {id: 'Proj05', value: 100},
+      {id: 'Proj06', value: 100},
+      {id: 'Proj07', value: 200},
+      {id: 'Proj08', value: 400},
+      {id: 'Proj09', value: 400},
+      {id: 'Proj10', value: 400},
+      {id: 'Proj11', value: 1500},
+      {id: 'Proj12', value: 110},
+      {id: 'Proj13', value: 300},
+      {id: 'Proj14', value: 200},
+      {id: 'Proj15', value: 100},
+      {id: 'Proj16', value: 100},
+      {id: 'Proj17', value: 200},
+      {id: 'Proj18', value: 400},
+      {id: 'Proj19', value: 400},
+      {id: 'Proj20', value: 400}
+
+   ]},
+   {'name': 'H Mutations',
+    'value': 0,
+    'type': 'numeric',
+    'data': [
+      {id: 'Proj01', value: 150},
+      {id: 'Proj02', value: 100},
+      {id: 'Proj03', value: 200},
+      {id: 'Proj04', value: 100},
+      {id: 'Proj05', value: 0},
+      {id: 'Proj06', value: 0},
+      {id: 'Proj07', value: 20},
+      {id: 'Proj08', value: 30},
+      {id: 'Proj09', value: 30},
+      {id: 'Proj10', value: 30},
+      {id: 'Proj11', value: 150},
+      {id: 'Proj12', value: 100},
+      {id: 'Proj13', value: 200},
+      {id: 'Proj14', value: 100},
+      {id: 'Proj15', value: 0},
+      {id: 'Proj16', value: 0},
+      {id: 'Proj17', value: 20},
+      {id: 'Proj18', value: 30},
+      {id: 'Proj19', value: 30},
+      {id: 'Proj20', value: 30}
+
+   ]},
+   {'name': 'Genes',
+    'value': 0,
+    'type': 'numeric',
+    'data': [
+      {id: 'Proj01', value: 50},
+      {id: 'Proj02', value: 1},
+      {id: 'Proj03', value: 20},
+      {id: 'Proj04', value: 10},
+      {id: 'Proj05', value: 10},
+      {id: 'Proj06', value: 10},
+      {id: 'Proj07', value: 10},
+      {id: 'Proj08', value: 30},
+      {id: 'Proj09', value: 30},
+      {id: 'Proj10', value: 30},
+      {id: 'Proj11', value: 50},
+      {id: 'Proj12', value: 1},
+      {id: 'Proj13', value: 20},
+      {id: 'Proj14', value: 10},
+      {id: 'Proj15', value: 10},
+      {id: 'Proj16', value: 10},
+      {id: 'Proj17', value: 10},
+      {id: 'Proj18', value: 30},
+      {id: 'Proj19', value: 30},
+      {id: 'Proj20', value: 30}
+
+   ]}
+];
+
+
 
 var parallel = new dcc.ParallelPipe(data, null);
 parallel.render( d3.select('#parallel').node() );

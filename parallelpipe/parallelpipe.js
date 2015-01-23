@@ -5,6 +5,11 @@
 
   var ParallelPipe = function( data, config ) {
 
+    /********************************************************************************
+    *
+    * histogramHeight = 0 ==> No histogram for ranked column
+    *
+    ********************************************************************************/
     var defaultConfig = {
       // Layout
       width: 700,
@@ -18,8 +23,8 @@
       //histogramHeight: 40,
       //histogramPadding: 5,
 
-      histogramHeight: 40,
-      histogramPadding: 5,
+      histogramHeight: 0,
+      histogramPadding: 15,
 
       hspacing: 25,
       vspacing: 10,
@@ -361,16 +366,18 @@ console.log('in swap ', col1 + ' with ' + col2);
 
 
     // Summary (Historgram)
-    var histogram = columns.append('rect')
-      .attr('x', 1)
-      .attr('y', function(d) {
-        return config.histogramHeight - 0.10 * d.value;
-      })
-      .attr('width', config.barWidth - 1)
-      .attr('height', function(d) {
-        return 0.10 * d.value;
-      })
-      .attr('fill', '#48F');
+    if (config.histogramHeight > 0) {
+      columns.append('rect')
+        .attr('x', 1)
+        .attr('y', function(d) {
+          return config.histogramHeight - 0.10 * d.value;
+        })
+        .attr('width', config.barWidth - 1)
+        .attr('height', function(d) {
+          return 0.10 * d.value;
+        })
+        .attr('fill', '#48F');
+    }
 
 
     // Create columns
@@ -478,7 +485,9 @@ console.log('in swap ', col1 + ' with ' + col2);
     var columns = _this.chart.selectAll('.parallel-column');
 
     // Column names
-    columns.append('text').text(function(d) { return d.name; });
+    columns.append('text').text(function(d) { 
+      return d.name + ((d.type === 'ranked')? ' (ranked)' : ''); 
+    });
 
     console.log('series', _this.series);
 
@@ -515,12 +524,14 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.chart = _this.vis.append('g').attr('transform', _this.translate(config.paddingLeft, config.paddingTop));
 
     // Debugging
+    /*
     _this.chart.append('rect')
       .attr('x', 0)
       .attr('y', 0)
       .attr('width', config.chartWidth)
       .attr('height', config.chartHeight)
       .attr('fill', '#EEEEEE');
+      */
 
     _this.links = _this.chart.append('g');
 
