@@ -7,8 +7,8 @@
 
     var defaultConfig = {
       // Layout
-      width: 600,
-      height: 180,
+      width: 700,
+      height: 190,
       margin: 5,
       paddingTop: 5,
       paddingBottom: 20,
@@ -318,12 +318,19 @@ console.log('in swap ', col1 + ' with ' + col2);
           g.py = hSize + scale(g.value);
         });
       } else {
+        /*
         columnData.data = _.sortBy(columnData.data, function(item) {
           return -item.value;
         });
+        */
         columnData.data.forEach(function(g, gidx) {
+          // Path
           g.px = columnIdx * config.columnSize;
           g.py = hSize + 0.5*config.barHeight + gidx * (config.barHeight + config.vspacing);
+
+          // Bar
+          g.bx = 1;
+          g.by = gidx * (config.barHeight + config.vspacing);
         });
       }
     });
@@ -429,7 +436,7 @@ console.log('in swap ', col1 + ' with ' + col2);
         columnData.data.forEach(function(g, gidx) {
           group.append('rect')
             .datum(g)
-            .attr('class', g.id + ' ' + 'parallel-column-data')
+            .attr('class', g.id + ' ' + 'parallel-column-data' + ' ' + 'outer')
             .attr('x', 1)
             .attr('y',  gidx * (config.barHeight + config.vspacing))
             .attr('width', config.barWidth-1)
@@ -441,7 +448,8 @@ console.log('in swap ', col1 + ' with ' + col2);
             });
 
           group.append('rect')
-            .attr('class', g.id + ' ' + 'parallel-column-data')
+            .datum(g)
+            .attr('class', g.id + ' ' + 'parallel-column-data' + ' ' + 'inner')
             .attr('x', 1)
             .attr('y', gidx * (config.barHeight + config.vspacing))
             .attr('width',  g.value * 0.1)
@@ -597,9 +605,19 @@ console.log('in swap ', col1 + ' with ' + col2);
         _this.svg.selectAll('.debug').remove();
       });
 
-      _this.chart.selectAll('.parallel-column')
-        .on('click', function(d, i) {
-          console.log('....', _this.data);
+
+      // test
+      d3.select('body').on('keydown', function(d) {
+        _this.shiftKey = d3.event.keyCode === 16;
+      });
+      d3.select('body').on('keyup', function(d) {
+        _this.shiftKey = false;
+      });
+ 
+
+      _this.chart.selectAll('.parallel-column').on('click', function(d, i) {
+        console.log(_this.shiftKey);
+        if (_this.shiftKey == false) {
           var realIndex = _.findIndex(_this.data, function(d2) {
             return d.name === d2.name;
           });
@@ -607,14 +625,48 @@ console.log('in swap ', col1 + ' with ' + col2);
           if (realIndex > 0) {
             _this.swapColumn(realIndex);
           }
+          return;
+        }
+
+        var iii = _.findIndex(_this.data, function(d2) {
+          return d.name === d2.name;
         });
 
-      /*
-      _this.svg.on('click', function() {
-        console.log('clicked');
-        _this.swapColumn(4);
+        var iiiName = _this.data[iii].name;
+        var iiiLen = _this.data[iii].data.length - 1;
+        var iiiDuration = 1200;
+
+        console.log('before', _.pluck(_this.data[iii].data, 'value'));
+        _this.data[iii].data.reverse();
+        console.log('after', _.pluck(_this.data[iii].data, 'value'));
+
+        _this.computeLayout();
+        _this.renderDataLinks2(_this.element, true);
+
+        _this.chart.selectAll('.parallel-column').filter('.' + iiiName)
+          .selectAll('.inner')
+          .transition()
+          .duration(iiiDuration)
+          .attr('y', function(d, i) {
+            return d.by;
+          });
+
+        _this.chart.selectAll('.parallel-column').filter('.' + iiiName)
+          .selectAll('.outer')
+          .transition()
+          .duration(iiiDuration)
+          .attr('y', function(d, i) {
+            return d.by;
+          });
+
+        d3.selectAll('path')
+          .transition()
+          .duration(iiiDuration)
+          .attr('d', function(d) {
+            return _this.diagonal2(d.diagonalData);
+          });
       });
-      */
+
 
 
   };
