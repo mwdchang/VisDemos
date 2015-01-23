@@ -77,6 +77,9 @@
     this.vis = undefined;
     this.chart = undefined;
 
+
+    this.series = _.pluck(this.data[0].data, 'id').sort();
+
     // Helper and utilities
     this.translate = function(x, y) {
       return 'translate(' + x + ',' + y + ')';
@@ -99,6 +102,7 @@
     var _this = this;
     var config = _this.config;
     // var links = _this.chart.append('g');
+    var hSize = config.histogramHeight + config.histogramPadding;
 
     _this.data.forEach(function(columnData, columnIdx) {
 
@@ -107,8 +111,19 @@
         _this.data[0].data.forEach(function(currentItem) {
           var x1 = currentItem.px;
           var y1 = currentItem.py;
-          var x2 = currentItem.px;
-          var y2 = currentItem.py;
+          var x2 = currentItem.px-15;
+
+          if (_this.data[0].type && _this.data[0].type === 'categorical') {
+            x2 -= 0.5 * config.barWidth;
+          } else if (_this.data[0].type && _this.data[0].type === 'numeric') {
+            x2 -= 0.5 * config.barWidth;
+          } else {
+          }
+
+          var y2 = hSize + 0.5*config.barHeight + _this.series.indexOf(currentItem.id) * (config.barHeight + config.vspacing);
+
+
+          //var y2 = currentItem.py;
 
           currentItem.diagonalData = {
             source: { x: x1, y: y1 },
@@ -155,7 +170,7 @@
         // Figure out offset based on current and previous
         if (previousCol.type && previousCol.type === 'categorical') {
           x2 += 0;
-        } else if (previousCol.type && previousCol.type === 'ordinal') {
+        } else if (previousCol.type && previousCol.type === 'numeric') {
           x2 += 0;
         } else {
           x2 += config.barWidth;
@@ -289,7 +304,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
           });
         });
-      } else if (columnData.type && columnData.type === 'ordinal') {
+      } else if (columnData.type && columnData.type === 'numeric') {
         // FIXME: dupe
         var max = d3.max( _.pluck(columnData.data, 'value'));
         var min = d3.min( _.pluck(columnData.data, 'value'));
@@ -303,6 +318,9 @@ console.log('in swap ', col1 + ' with ' + col2);
           g.py = hSize + scale(g.value);
         });
       } else {
+        columnData.data = _.sortBy(columnData.data, function(item) {
+          return -item.value;
+        });
         columnData.data.forEach(function(g, gidx) {
           g.px = columnIdx * config.columnSize;
           g.py = hSize + 0.5*config.barHeight + gidx * (config.barHeight + config.vspacing);
@@ -381,7 +399,7 @@ console.log('in swap ', col1 + ' with ' + col2);
             .style('fill', '#F9B');
         });
 
-      } else if (columnData.type && columnData.type === 'ordinal') {
+      } else if (columnData.type && columnData.type === 'numeric') {
 
         var max = d3.max( _.pluck(columnData.data, 'value'));
         var min = d3.min( _.pluck(columnData.data, 'value'));
@@ -454,8 +472,7 @@ console.log('in swap ', col1 + ' with ' + col2);
     // Column names
     columns.append('text').text(function(d) { return d.name; });
 
-    var series = _.pluck(_this.data[0].data, 'id');
-    console.log('series', series);
+    console.log('series', _this.series);
 
     var hist = config.histogramPadding + config.histogramHeight;
     var s = config.vspacing + config.barHeight;
@@ -463,7 +480,7 @@ console.log('in swap ', col1 + ' with ' + col2);
     console.log(hist, s);
 
     _this.svg.selectAll('.series-label')
-      .data(series)
+      .data(_this.series)
       .enter()
       .append('text')
       .classed('series-label', true)
