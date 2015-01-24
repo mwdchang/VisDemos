@@ -1,3 +1,21 @@
+
+
+/*******************************************************************************
+* A variant on parallel coordinate visualization; adding suport for ranked as
+* well as categorical data.
+*
+* Method summary 
+*  - render
+*  - renderDataPoints
+*  - renderDataLinks
+*  - computeLinks 
+*  - computeLayouts
+*  - swapColumn
+*
+* note: computeLinks and computeLayouts must be called before any rendering
+* 
+********************************************************************************/
+
 (function() {
   'use strict';
 
@@ -103,15 +121,13 @@
 
 
 
-  ParallelPipe.prototype.renderDataLinks2 = function( element, computeOnly ) {
+  ParallelPipe.prototype.computeLinks = function(element) {
     var _this = this;
     var config = _this.config;
-    // var links = _this.chart.append('g');
     var hSize = config.histogramHeight + config.histogramPadding;
 
     _this.data.forEach(function(columnData, columnIdx) {
-
-      // TODO: ab-initio
+      // Ab Initio
       if (columnIdx === 0) {
         _this.data[0].data.forEach(function(currentItem) {
           var x1 = currentItem.px;
@@ -126,18 +142,50 @@
           }
 
           var y2 = hSize + 0.5*config.barHeight + _this.series.indexOf(currentItem.id) * (config.barHeight + config.vspacing);
-
-
-          //var y2 = currentItem.py;
-
           currentItem.diagonalData = {
             source: { x: x1, y: y1 },
             target: { x: x2, y: y2 }
           };
         });
+      } else {
+        var previousCol = _this.data[columnIdx-1];
+        var currentCol = _this.data[columnIdx];
+        currentCol.data.forEach(function(currentItem) {
+          var previousItem = _.find(previousCol.data, function(d) {
+            return d.id === currentItem.id;
+          });
+          var x1 = currentItem.px;
+          var y1 = currentItem.py;
+          var x2 = previousItem.px;
+          var y2 = previousItem.py;
 
-        if (computeOnly === true) return;
+          // Figure out offset based on current and previous
+          if (previousCol.type && previousCol.type === 'categorical') {
+            x2 += 0;
+          } else if (previousCol.type && previousCol.type === 'numeric') {
+            x2 += 0;
+          } else {
+            x2 += config.barWidth;
+          }
+          currentItem.diagonalData = {
+            source: { x: x1, y: y1 },
+            target: { x: x2, y: y2 }
+          };
+        });
+      }
+    });
+  };
 
+
+  ParallelPipe.prototype.renderDataLinks = function( element, computeOnly ) {
+    var _this = this;
+    var config = _this.config;
+    var hSize = config.histogramHeight + config.histogramPadding;
+
+    _this.data.forEach(function(columnData, columnIdx) {
+
+      // Ab-initio
+      if (columnIdx === 0) {
         _this.links.selectAll('.' + _this.data[0].name + '-path')
           .data(_this.data[0].data)
           .enter()
@@ -155,58 +203,25 @@
             'stroke': '#CCC',
             'stroke-width': 1
           });
-
-        return;
+      } else {
+        _this.links.selectAll('.' + _this.data[columnIdx].name + '-path')
+          .data(_this.data[columnIdx].data)
+          .enter()
+          .append('path')
+          .attr('class', function(d) {
+            return _this.data[columnIdx].name + ' ' +
+              d.id + ' ' +
+              _this.data[columnIdx].name + '-path';
+          })
+          .attr('d', function(d) {
+            return _this.diagonal2(d.diagonalData);
+          })
+          .style({
+            'fill': 'none',
+            'stroke': '#CCC',
+            'stroke-width': 1
+          });
       }
-
-      var previousCol = _this.data[columnIdx-1];
-      var currentCol = _this.data[columnIdx];
-
-      currentCol.data.forEach(function(currentItem) {
-        var previousItem = _.find(previousCol.data, function(d) {
-          return d.id === currentItem.id;
-        });
-
-        var x1 = currentItem.px;
-        var y1 = currentItem.py;
-        var x2 = previousItem.px;
-        var y2 = previousItem.py;
-
-        // Figure out offset based on current and previous
-        if (previousCol.type && previousCol.type === 'categorical') {
-          x2 += 0;
-        } else if (previousCol.type && previousCol.type === 'numeric') {
-          x2 += 0;
-        } else {
-          x2 += config.barWidth;
-        }
-        currentItem.diagonalData = {
-          source: { x: x1, y: y1 },
-          target: { x: x2, y: y2 }
-        };
-      });
-
-      if (computeOnly === true) return;
-
-      _this.links.selectAll('.' + currentCol.name + '-path')
-        .data(currentCol.data)
-        .enter()
-        .append('path')
-        .attr('class', function(d) {
-          return currentCol.name + ' ' +
-            d.id + ' ' +
-            currentCol.name + '-path';
-        })
-        .attr('d', function(d) {
-          return _this.diagonal2(d.diagonalData);
-        })
-        .style({
-          'fill': 'none',
-          'stroke': '#CCC',
-          'stroke-width': 1
-        });
-
-
     });
   };
 
@@ -231,8 +246,6 @@ console.log('in swap ', col1 + ' with ' + col2);
         return d.name === col2;
       }).attr('transform'));
 
-//console.log(trans1.translate);
-//console.log(trans2.translate);
 
     var tDuration = 1200;
 
@@ -265,7 +278,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
     // d3.selectAll('path').remove();
     _this.computeLayout(_this.element);
-    _this.renderDataLinks2(_this.element, true);
+    _this.computeLinks(_this.element);
 
     var diagonalData = {
       source: { x: 0, y: 0 },
@@ -345,7 +358,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
 
   // FIXME: Scale histogram and bar
-  ParallelPipe.prototype.renderDataBars = function( element ) {
+  ParallelPipe.prototype.renderDataPoints = function( element ) {
     var _this = this;
     var config = _this.config;
 
@@ -469,7 +482,6 @@ console.log('in swap ', col1 + ' with ' + col2);
         })
       }
 
-
     });
   };
 
@@ -537,8 +549,9 @@ console.log('in swap ', col1 + ' with ' + col2);
 
     // Render components
     _this.computeLayout(_this.element);
-    _this.renderDataBars(_this.element);
-    _this.renderDataLinks2(_this.element, false);
+    _this.computeLinks(_this.element);
+    _this.renderDataPoints(_this.element);
+    _this.renderDataLinks(_this.element, false);
     _this.renderDataLabels(_this.element);  // Goes last !!!
 
 
@@ -652,7 +665,7 @@ console.log('in swap ', col1 + ' with ' + col2);
         console.log('after', _.pluck(_this.data[iii].data, 'value'));
 
         _this.computeLayout();
-        _this.renderDataLinks2(_this.element, true);
+        _this.renderDataLinks(_this.element, true);
 
         _this.chart.selectAll('.parallel-column').filter('.' + iiiName)
           .selectAll('.inner')
