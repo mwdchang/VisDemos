@@ -1,20 +1,20 @@
-
-
 /*******************************************************************************
 * A variant on parallel coordinate visualization; adding suport for ranked as
 * well as categorical data.
 *
-* Method summary 
+* Method summary
 *  - render
 *  - renderDataPoints
 *  - renderDataLinks
-*  - computeLinks 
-*  - computeLayouts
+*  - computeLinks
+*  - computeLayout
 *  - setInteractions
-*  - swapColumn
 *
-* note: computeLinks and computeLayouts must be called before any rendering
-* 
+*  - swapColumn
+*  - reverseColumnOrder
+*
+* note: computeLinks and computeLayout must be called before any rendering
+*
 ********************************************************************************/
 
 (function() {
@@ -43,14 +43,19 @@
       //histogramPadding: 5,
 
       histogramHeight: 0,
-      histogramPadding: 10, 
+      histogramPadding: 10,
 
       hspacing: 25,
       vspacing: 10,
 
+      // Colours
+      defaultPathColour: '#888888',
 
+      defaultBarOutlineColour: '#888888',
+      defaultBarColour: '#888888',
 
       // Callback
+      clickFunc: function() {}
     };
 
 
@@ -89,10 +94,9 @@
     config.barWidth = (config.chartWidth - length * config.hspacing) / length;
     config.barHeight = ((config.chartHeight - config.histogramHeight - config.histogramPadding) - (seriesLength * config.vspacing)) / seriesLength;
 
+
     config.columnSize = config.barWidth + config.hspacing;
-
-
-    config.axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight); 
+    config.axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight);
 
     console.log('parallel coord config', config);
 
@@ -123,7 +127,7 @@
 
 
 
-  ParallelPipe.prototype.computeLinks = function(element) {
+  ParallelPipe.prototype.computeLinks = function() {
     var _this = this;
     var config = _this.config;
     var hSize = config.histogramHeight + config.histogramPadding;
@@ -167,7 +171,7 @@
           } else if (previousCol.type && previousCol.type === 'numeric') {
             x2 += 0;
           } else {
-            x2 += config.barWidth;
+            x2 += config.barWidth+1; // +1 Just to make things look nicer
           }
           currentItem.diagonalData = {
             source: { x: x1, y: y1 },
@@ -179,7 +183,7 @@
   };
 
 
-  ParallelPipe.prototype.renderDataLinks = function( element, computeOnly ) {
+  ParallelPipe.prototype.renderDataLinks = function() {
     var _this = this;
     var config = _this.config;
     var hSize = config.histogramHeight + config.histogramPadding;
@@ -202,7 +206,7 @@
           })
           .style({
             'fill': 'none',
-            'stroke': '#CCC',
+            'stroke': config.defaultPathColour,
             'stroke-width': 1
           });
       } else {
@@ -220,7 +224,7 @@
           })
           .style({
             'fill': 'none',
-            'stroke': '#CCC',
+            'stroke': config.defaultPathColour,
             'stroke-width': 1
           });
       }
@@ -229,10 +233,58 @@
 
 
   // Experimental
+  ParallelPipe.prototype.reverseColumnOrder = function( idx ) {
+    var _this = this;
+    var config = _this.config;
+
+    var name = _this.data[idx].name;
+    var duration = 1200;
+
+    if (_this.data[idx].type !== 'ranked') {
+      return;
+    }
+
+
+    _this.data[idx].data.reverse();
+    _this.computeLayout();
+    _this.computeLinks();
+
+    _this.chart.selectAll('.parallel-column').filter('.' + name)
+      .selectAll('.inner')
+      .transition()
+      .duration(duration)
+      .attr('y', function(d, i) {
+        return d.by;
+      });
+
+    _this.chart.selectAll('.parallel-column').filter('.' + name)
+      .selectAll('.outer')
+      .transition()
+      .duration(duration)
+      .attr('y', function(d, i) {
+        return d.by;
+      });
+
+    d3.selectAll('path')
+      .transition()
+      .duration(duration)
+      .attr('d', function(d) {
+        return _this.diagonal2(d.diagonalData);
+      });
+
+  };
+
+
+  // Experimental
   ParallelPipe.prototype.swapColumn = function( idx ) {
     var _this = this;
     var config = _this.config;
     var size = config.barWidth + config.hspacing;
+
+    // Only swap with left for now
+    if (idx <= 0) {
+      return 0;
+    }
 
     var col1 = _this.data[ idx ].name;
     var col2 = _this.data[idx-1].name;
@@ -277,10 +329,8 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.data[idx] = _this.data[idx-1];
     _this.data[idx-1] = temp;
 
-
-    // d3.selectAll('path').remove();
-    _this.computeLayout(_this.element);
-    _this.computeLinks(_this.element);
+    _this.computeLayout();
+    _this.computeLinks();
 
     var diagonalData = {
       source: { x: 0, y: 0 },
@@ -296,7 +346,7 @@ console.log('in swap ', col1 + ' with ' + col2);
   };
 
 
-  ParallelPipe.prototype.computeLayout = function( element ) {
+  ParallelPipe.prototype.computeLayout = function() {
     var _this = this;
     var config = _this.config;
     var size = config.barWidth + config.hspacing;
@@ -356,8 +406,8 @@ console.log('in swap ', col1 + ' with ' + col2);
 
 
 
-  // FIXME: Scale histogram 
-  ParallelPipe.prototype.renderDataPoints = function( element ) {
+  // FIXME: Scale histogram
+  ParallelPipe.prototype.renderDataPoints = function() {
     var _this = this;
     var config = _this.config;
 
@@ -371,7 +421,6 @@ console.log('in swap ', col1 + ' with ' + col2);
       .attr('class', function(d) {
         return 'parallel-column' + ' ' + d.name;
       })
-      //.classed('parallel-column', true)
       .attr('transform', function(d, i) {
         return _this.translate( i * size, 0);
       });
@@ -429,6 +478,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
       } else if (columnData.type && columnData.type === 'numeric') {
 
+        // Scale
         group.append('rect')
           .attr('x', config.barWidth * 0.5 - 1)
           .attr('y', -1)
@@ -451,6 +501,8 @@ console.log('in swap ', col1 + ' with ' + col2);
         var scale = d3.scale.linear().domain([columnData.min, columnData.max]).range([0, config.barWidth]);
 
         columnData.data.forEach(function(g, gidx) {
+
+          // Draw bar outline
           group.append('rect')
             .datum(g)
             .attr('class', g.id + ' ' + 'parallel-column-data' + ' ' + 'outer')
@@ -461,9 +513,10 @@ console.log('in swap ', col1 + ' with ' + col2);
             .style({
               fill: '#FFFFFF',
               'fill-opacity': 0,
-              stroke: '#BBB'
+              stroke: config.defaultBarOutlineColour
             });
 
+          // Draw bar
           group.append('rect')
             .datum(g)
             .attr('class', g.id + ' ' + 'parallel-column-data' + ' ' + 'inner')
@@ -472,7 +525,7 @@ console.log('in swap ', col1 + ' with ' + col2);
             .attr('width',  scale(g.value))
             .attr('height', config.barHeight)
             .style({
-              fill: '#48F',
+              fill: config.defaultBarColour,
               stroke: 'none'
             });
 
@@ -487,15 +540,15 @@ console.log('in swap ', col1 + ' with ' + col2);
    * Render labels and other text related things
    * NOTE: Assumes that other compoonents are already in place
    */
-  ParallelPipe.prototype.renderDataLabels = function( element ) {
+  ParallelPipe.prototype.renderDataLabels = function() {
     var _this = this;
     var config = _this.config;
 
     var columns = _this.chart.selectAll('.parallel-column');
 
     // Column names
-    columns.append('text').text(function(d) { 
-      return d.name + ((d.type === 'ranked')? ' (ranked)' : ''); 
+    columns.append('text').text(function(d) {
+      return d.name + ((d.type === 'ranked')? ' (ranked)' : '');
     });
 
     var hist = config.histogramPadding + config.histogramHeight;
@@ -528,7 +581,7 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.chart = _this.vis.append('g').attr('transform', _this.translate(config.paddingLeft, config.paddingTop));
 
     // Debugging
-   
+
     /*
     _this.chart.append('rect')
       .attr('x', 0)
@@ -541,19 +594,18 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.links = _this.chart.append('g');
 
     // Render components
-    _this.computeLayout(_this.element);
-    _this.computeLinks(_this.element);
-    _this.renderDataPoints(_this.element);
-    _this.renderDataLinks(_this.element, false);
-    _this.renderDataLabels(_this.element);  // Goes last !!!
+    _this.computeLayout();
+    _this.computeLinks();
+    _this.renderDataPoints();
+    _this.renderDataLinks();
+    _this.renderDataLabels();  // Goes last !!!
   };
 
 
 
-  ParallelPipe.prototype.setInteractions = function( element ) {
+  ParallelPipe.prototype.setInteractions = function() {
     var _this = this;
     var config = _this.config;
-    _this.element = element;
 
     // Hook up interactions
     _this.svg.selectAll('.parallel-column-data')
@@ -579,7 +631,7 @@ console.log('in swap ', col1 + ' with ' + col2);
       })
       .on('mouseout', function(d, idx) {
         _this.svg.selectAll('.' + d.id).style({
-          stroke: '#888888',
+          stroke: config.defaultPathColour,
           'stroke-width': 1
         });
 
@@ -621,7 +673,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
         classes.forEach(function(c, idx) {
           _this.svg.selectAll('.' + c).style({
-            stroke: '#888888',
+            stroke: config.defaultPathColour,
             'stroke-width': 1
           });
         })
@@ -637,64 +689,27 @@ console.log('in swap ', col1 + ' with ' + col2);
       d3.select('body').on('keyup', function(d) {
         _this.shiftKey = false;
       });
- 
+
 
       _this.chart.selectAll('.parallel-column').on('click', function(d, i) {
         console.log(_this.shiftKey);
-        if (_this.shiftKey == false) {
-          var realIndex = _.findIndex(_this.data, function(d2) {
-            return d.name === d2.name;
-          });
-          console.log('clicked',  i, realIndex, d.name);
-          if (realIndex > 0) {
-            _this.swapColumn(realIndex);
-          }
-          return;
-        }
 
-        var iii = _.findIndex(_this.data, function(d2) {
+        var realIndex = _.findIndex(_this.data, function(d2) {
           return d.name === d2.name;
         });
 
-        var iiiName = _this.data[iii].name;
-        var iiiLen = _this.data[iii].data.length - 1;
-        var iiiDuration = 1200;
-
-        console.log('before', _.pluck(_this.data[iii].data, 'value'));
-        _this.data[iii].data.reverse();
-        console.log('after', _.pluck(_this.data[iii].data, 'value'));
-
-        _this.computeLayout();
-        _this.renderDataLinks(_this.element, true);
-
-        _this.chart.selectAll('.parallel-column').filter('.' + iiiName)
-          .selectAll('.inner')
-          .transition()
-          .duration(iiiDuration)
-          .attr('y', function(d, i) {
-            return d.by;
-          });
-
-        _this.chart.selectAll('.parallel-column').filter('.' + iiiName)
-          .selectAll('.outer')
-          .transition()
-          .duration(iiiDuration)
-          .attr('y', function(d, i) {
-            return d.by;
-          });
-
-        d3.selectAll('path')
-          .transition()
-          .duration(iiiDuration)
-          .attr('d', function(d) {
-            return _this.diagonal2(d.diagonalData);
-          });
+        if (_this.shiftKey == false) {
+          if (realIndex > 0) {
+            _this.swapColumn(realIndex);
+          }
+        } else {
+          _this.reverseColumnOrder(realIndex);
+        }
       });
-
-
 
   };
 
+  // Register onto namespace
   dcc.ParallelPipe = ParallelPipe;
 })();
 

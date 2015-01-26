@@ -204,6 +204,7 @@ var data = [
 
 var parallel = new dcc.ParallelPipe(data, null);
 parallel.render( d3.select('#parallel').node() );
+parallel.setInteractions();
 
 
 </script>
