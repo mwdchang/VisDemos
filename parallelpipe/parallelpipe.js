@@ -10,6 +10,7 @@
 *  - renderDataLinks
 *  - computeLinks 
 *  - computeLayouts
+*  - setInteractions
 *  - swapColumn
 *
 * note: computeLinks and computeLayouts must be called before any rendering
@@ -42,10 +43,11 @@
       //histogramPadding: 5,
 
       histogramHeight: 0,
-      histogramPadding: 15,
+      histogramPadding: 10, 
 
       hspacing: 25,
       vspacing: 10,
+
 
 
       // Callback
@@ -87,10 +89,10 @@
     config.barWidth = (config.chartWidth - length * config.hspacing) / length;
     config.barHeight = ((config.chartHeight - config.histogramHeight - config.histogramPadding) - (seriesLength * config.vspacing)) / seriesLength;
 
-
     config.columnSize = config.barWidth + config.hspacing;
 
 
+    config.axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight); 
 
     console.log('parallel coord config', config);
 
@@ -304,6 +306,16 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.data.forEach(function(columnData, columnIdx) {
       var data = columnData.data;
 
+      if (['ranked', 'numeric'].indexOf(columnData.type) >= 0) {
+        if (! columnData.hasOwnProperty('max')) {
+          columnData.max = d3.max( _.pluck(columnData.data, 'value'));
+        }
+        if (! columnData.hasOwnProperty('min')) {
+          columnData.min = d3.min( _.pluck(columnData.data, 'value'));
+        }
+      }
+
+
       if (columnData.type && columnData.type === 'categorical') {
         // 1) Find uniques
         var uniqueValues = _.unique(_.pluck(columnData.data, 'value')).sort();
@@ -319,28 +331,15 @@ console.log('in swap ', col1 + ' with ' + col2);
           filtered.forEach(function(d) {
             d.px = columnIdx * config.columnSize + 0.5*config.barWidth;
             d.py = hSize + offset + cidx * gap;
-
           });
         });
       } else if (columnData.type && columnData.type === 'numeric') {
-        // FIXME: dupe
-        var max = d3.max( _.pluck(columnData.data, 'value'));
-        var min = d3.min( _.pluck(columnData.data, 'value'));
-        var axisPadding = 2;
-        var axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight) - 8;
-        var scale = d3.scale.linear().domain([0, max]).range([axisHeight, 0]);
-
-
+        var scale = d3.scale.linear().domain([columnData.min, columnData.max]).range([config.axisHeight, 0]);
         columnData.data.forEach(function(g, gidx) {
           g.px = columnIdx * config.columnSize + 0.5*config.barWidth;
           g.py = hSize + scale(g.value);
         });
       } else {
-        /*
-        columnData.data = _.sortBy(columnData.data, function(item) {
-          return -item.value;
-        });
-        */
         columnData.data.forEach(function(g, gidx) {
           // Path
           g.px = columnIdx * config.columnSize;
@@ -357,7 +356,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
 
 
-  // FIXME: Scale histogram and bar
+  // FIXME: Scale histogram 
   ParallelPipe.prototype.renderDataPoints = function( element ) {
     var _this = this;
     var config = _this.config;
@@ -374,7 +373,7 @@ console.log('in swap ', col1 + ' with ' + col2);
       })
       //.classed('parallel-column', true)
       .attr('transform', function(d, i) {
-        return _this.translate( i * size, 1);
+        return _this.translate( i * size, 0);
       });
 
 
@@ -397,6 +396,8 @@ console.log('in swap ', col1 + ' with ' + col2);
     var hSize = config.histogramHeight + config.histogramPadding;
     columns.each(function(columnData, columnIdx) {
       var data = columnData.data;
+
+
       var group = d3.select(this).append('g')
         .attr('transform', _this.translate(0, config.histogramHeight+config.histogramPadding))
         .append('g');
@@ -428,38 +429,34 @@ console.log('in swap ', col1 + ' with ' + col2);
 
       } else if (columnData.type && columnData.type === 'numeric') {
 
-        var max = d3.max( _.pluck(columnData.data, 'value'));
-        var min = d3.min( _.pluck(columnData.data, 'value'));
-        var axisPadding = 2;
-        var axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight) - 8;
-        var scale = d3.scale.linear().domain([0, max]).range([axisHeight, 0]);
-
         group.append('rect')
           .attr('x', config.barWidth * 0.5 - 1)
-          .attr('y', -axisPadding)
+          .attr('y', -1)
           .attr('width', 2)
-          .attr('height', axisHeight + 2*axisPadding)
+          .attr('height', config.axisHeight+2)
           .style('fill', '#777')
           .style('stroke', 'none');
 
         group.append('text')
           .attr('x',  config.barWidth * 0.5 + 5)
           .attr('y', 0)
-          .text(max);
+          .text(columnData.max);
 
         group.append('text')
           .attr('x',  config.barWidth * 0.5 + 5)
-          .attr('y', axisHeight)
-          .text(min);
+          .attr('y', config.axisHeight)
+          .text(columnData.min);
 
       } else {
+        var scale = d3.scale.linear().domain([columnData.min, columnData.max]).range([0, config.barWidth]);
+
         columnData.data.forEach(function(g, gidx) {
           group.append('rect')
             .datum(g)
             .attr('class', g.id + ' ' + 'parallel-column-data' + ' ' + 'outer')
             .attr('x', 1)
             .attr('y',  gidx * (config.barHeight + config.vspacing))
-            .attr('width', config.barWidth-1)
+            .attr('width', config.barWidth)
             .attr('height', config.barHeight)
             .style({
               fill: '#FFFFFF',
@@ -472,7 +469,7 @@ console.log('in swap ', col1 + ' with ' + col2);
             .attr('class', g.id + ' ' + 'parallel-column-data' + ' ' + 'inner')
             .attr('x', 1)
             .attr('y', gidx * (config.barHeight + config.vspacing))
-            .attr('width',  g.value * 0.1)
+            .attr('width',  scale(g.value))
             .attr('height', config.barHeight)
             .style({
               fill: '#48F',
@@ -501,12 +498,8 @@ console.log('in swap ', col1 + ' with ' + col2);
       return d.name + ((d.type === 'ranked')? ' (ranked)' : ''); 
     });
 
-    console.log('series', _this.series);
-
     var hist = config.histogramPadding + config.histogramHeight;
     var s = config.vspacing + config.barHeight;
-
-    console.log(hist, s);
 
     _this.svg.selectAll('.series-label')
       .data(_this.series)
@@ -527,7 +520,6 @@ console.log('in swap ', col1 + ' with ' + col2);
   ParallelPipe.prototype.render = function( element ) {
     var _this = this;
     var config = _this.config;
-
     _this.element = element;
 
     // FIXME - use viewport
@@ -536,6 +528,7 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.chart = _this.vis.append('g').attr('transform', _this.translate(config.paddingLeft, config.paddingTop));
 
     // Debugging
+   
     /*
     _this.chart.append('rect')
       .attr('x', 0)
@@ -553,7 +546,14 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.renderDataPoints(_this.element);
     _this.renderDataLinks(_this.element, false);
     _this.renderDataLabels(_this.element);  // Goes last !!!
+  };
 
+
+
+  ParallelPipe.prototype.setInteractions = function( element ) {
+    var _this = this;
+    var config = _this.config;
+    _this.element = element;
 
     // Hook up interactions
     _this.svg.selectAll('.parallel-column-data')
