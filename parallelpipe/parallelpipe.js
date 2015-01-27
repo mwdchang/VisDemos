@@ -2,6 +2,11 @@
 * A variant on parallel coordinate visualization; adding suport for ranked as
 * well as categorical data.
 *
+* Column Types:
+*  - numeric: is a numeric value and shown as points on an axis scale
+*  - ranked: is numeric, but is rendered as histogram and arranged in specified order (assume to be sorted)
+*  - categorical: categorical data, this is grouped/merged to show common data points sharing common categories
+*
 * Method summary
 *  - render
 *  - renderDataPoints
@@ -9,9 +14,11 @@
 *  - computeLinks
 *  - computeLayout
 *  - setInteractions
-*
 *  - swapColumn
 *  - reverseColumnOrder
+*  - highlight
+*  - resetHighlight
+*  - query
 *
 * note: computeLinks and computeLayout must be called before any rendering
 *
@@ -50,9 +57,9 @@
 
       // Colours
       defaultPathColour: '#888888',
-
       defaultBarOutlineColour: '#888888',
       defaultBarColour: '#888888',
+
 
       // Callback
       clickFunc: function() {}
@@ -91,13 +98,13 @@
     config.chartWidth  = config.visWidth - (config.paddingLeft + config.paddingRight);
     config.chartHeight = config.visHeight - (config.paddingTop + config.paddingBottom);
 
+
     config.barWidth = (config.chartWidth - length * config.hspacing) / length;
     config.barHeight = ((config.chartHeight - config.histogramHeight - config.histogramPadding) - (seriesLength * config.vspacing)) / seriesLength;
 
 
     config.columnSize = config.barWidth + config.hspacing;
     config.axisHeight = config.chartHeight - (config.histogramPadding + config.histogramHeight);
-
     console.log('parallel coord config', config);
 
     this.data = data;
@@ -107,7 +114,15 @@
     this.chart = undefined;
 
 
+
     this.series = _.pluck(this.data[0].data, 'id').sort();
+
+    this.seriesColours = d3.scale.category20();
+
+    this.getColour = function(seriesName) {
+      var idx = _.indexOf(this.series, seriesName);
+      return this.seriesColours( idx % this.series.length );
+    };
 
     // Helper and utilities
     this.translate = function(x, y) {
@@ -232,6 +247,54 @@
   };
 
 
+  
+  // Experimental
+  // 2 for exact match, 3 for matching range
+  ParallelPipe.prototype.query = function() {
+    var _this = this;
+    var matchedSeries = [];
+
+    if (arguments.length < 2) {
+      return;
+    }
+
+    var colname = arguments[0];
+    var col = _.find(_this.data, function(d) {
+      return d.name === colname;
+    });
+
+    if (arguments.length === 2) {
+      var val = arguments[1];
+
+      col.data.forEach(function(d) {
+        if (d.value === val) {
+          matchedSeries.push(d.id);
+        }
+      });
+
+    } else if (arguments.length === 3) {
+      var start = arguments[1];
+      var end = arguments[2];
+
+      col.data.forEach(function(d) {
+        if (d.value >= start && d.value <= end) {
+          matchedSeries.push(d.id);
+        }
+      });
+    }
+
+    _this.series.forEach(function(seriesName) {
+      _this.resetHighlight(seriesName); 
+    });
+
+    matchedSeries.forEach(function(seriesName) {
+      _this.highlight(seriesName); 
+    });
+
+
+  };
+
+
 
   ParallelPipe.prototype.highlight = function(seriesName) {
     var _this = this;
@@ -239,8 +302,9 @@
 
     _this.chart.selectAll('.'+seriesName)
       .style({
-        'stroke': '#FF8800',
-        'stroke-width': '2'
+        // 'stroke': '#FF8800',
+        'stroke': _this.getColour(seriesName),
+        'stroke-width': 3
       });
   };
 
@@ -380,6 +444,7 @@ console.log('in swap ', col1 + ' with ' + col2);
     _this.data.forEach(function(columnData, columnIdx) {
       var data = columnData.data;
 
+      // Calculate maximum and minimum values for scaling
       if (['ranked', 'numeric'].indexOf(columnData.type) >= 0) {
         if (! columnData.hasOwnProperty('max')) {
           columnData.max = d3.max( _.pluck(columnData.data, 'value'));
@@ -388,7 +453,6 @@ console.log('in swap ', col1 + ' with ' + col2);
           columnData.min = d3.min( _.pluck(columnData.data, 'value'));
         }
       }
-
 
       if (columnData.type && columnData.type === 'categorical') {
         // 1) Find uniques
@@ -498,6 +562,15 @@ console.log('in swap ', col1 + ' with ' + col2);
             .attr('r', 5)
             .style('stroke', '#444')
             .style('fill', '#F9B');
+
+          // Experimental
+          group.append('text')
+            .attr('text-anchor', 'end')
+            .attr('x', config.barWidth*0.5 - 5)
+            .attr('y', offset + cidx * gap)
+            .text(category);
+
+
         });
 
       } else if (columnData.type && columnData.type === 'numeric') {
@@ -524,6 +597,27 @@ console.log('in swap ', col1 + ' with ' + col2);
       } else {
         var scale = d3.scale.linear().domain([columnData.min, columnData.max]).range([0, config.barWidth]);
 
+        // Draw scale
+        group.append('rect')
+          .attr('x', 1)
+          .attr('y', config.chartHeight-1)
+          .attr('height', 1)
+          .attr('width', config.barWidth)
+          .style('stroke', '#777');
+          
+        group.append('text')
+          .attr('x', 5)
+          .attr('y', config.chartHeight+9)
+          .attr('text-anchor', 'end')
+          .text(columnData.min);
+
+        group.append('text')
+          .attr('x', config.barWidth-5)
+          .attr('y', config.chartHeight+9)
+          .attr('text-anchor', 'start')
+          .text(columnData.max);
+
+
         columnData.data.forEach(function(g, gidx) {
 
           // Draw bar outline
@@ -535,7 +629,7 @@ console.log('in swap ', col1 + ' with ' + col2);
             .attr('width', config.barWidth)
             .attr('height', config.barHeight)
             .style({
-              fill: '#FFFFFF',
+              'fill': '#FFFFFF',
               'fill-opacity': 0,
               stroke: config.defaultBarOutlineColour
             });
@@ -552,6 +646,8 @@ console.log('in swap ', col1 + ' with ' + col2);
               fill: config.defaultBarColour,
               stroke: 'none'
             });
+
+
 
         })
       }
@@ -587,7 +683,6 @@ console.log('in swap ', col1 + ' with ' + col2);
          return _this.translate(5, 13 + config.paddingTop + hist + i*s);
       })
       .text(function(d) { return d; });
-
   };
 
 
@@ -636,6 +731,7 @@ console.log('in swap ', col1 + ' with ' + col2);
       .on('mouseover', function(d, idx) {
         _this.highlight(d.id);
 
+        /*
         _this.svg.append('text')
           .attr('class', 'debug')
           .attr('y', config.chartHeight + 15)
@@ -648,6 +744,7 @@ console.log('in swap ', col1 + ' with ' + col2);
             });
             return str;
           });
+          */
 
       })
       .on('mouseout', function(d, idx) {
@@ -665,6 +762,7 @@ console.log('in swap ', col1 + ' with ' + col2);
         classes.forEach(function(c, idx) {
           _this.highlight(c);
 
+          /*
           _this.svg.append('text')
             .attr('class', 'debug')
             .attr('y', config.chartHeight + 15 + 10*idx)
@@ -677,6 +775,7 @@ console.log('in swap ', col1 + ' with ' + col2);
               });
               return str;
             });
+            */
 
         });
       })
