@@ -232,6 +232,31 @@
   };
 
 
+
+  ParallelPipe.prototype.highlight = function(seriesName) {
+    var _this = this;
+    var config = _this.config;
+
+    _this.chart.selectAll('.'+seriesName)
+      .style({
+        'stroke': '#FF8800',
+        'stroke-width': '2'
+      });
+  };
+
+
+  ParallelPipe.prototype.resetHighlight = function(seriesName) {
+    var _this = this;
+    var config = _this.config;
+
+    _this.chart.selectAll('.'+seriesName)
+      .style({
+        'stroke': config.defaultPathColour,
+        'stroke-width':  1
+      });
+  };
+
+
   // Experimental
   ParallelPipe.prototype.reverseColumnOrder = function( idx ) {
     var _this = this;
@@ -276,18 +301,17 @@
 
 
   // Experimental
-  ParallelPipe.prototype.swapColumn = function( idx ) {
+  ParallelPipe.prototype.swapColumn = function( idx1, idx2 ) {
     var _this = this;
     var config = _this.config;
     var size = config.barWidth + config.hspacing;
 
-    // Only swap with left for now
-    if (idx <= 0) {
-      return 0;
+    if (idx1 < 0 || idx2 < 0 || idx1 === idx2 ) {
+      return; 
     }
 
-    var col1 = _this.data[ idx ].name;
-    var col2 = _this.data[idx-1].name;
+    var col1 = _this.data[ idx1 ].name;
+    var col2 = _this.data[ idx2 ].name;
 
 console.log('in swap ', col1 + ' with ' + col2);
     var trans1 = d3.transform(_this.chart.selectAll('.parallel-column')
@@ -325,9 +349,9 @@ console.log('in swap ', col1 + ' with ' + col2);
       });
 
 
-    var temp = _this.data[idx];
-    _this.data[idx] = _this.data[idx-1];
-    _this.data[idx-1] = temp;
+    var temp = _this.data[idx1];
+    _this.data[idx1] = _this.data[idx2];
+    _this.data[idx2] = temp;
 
     _this.computeLayout();
     _this.computeLinks();
@@ -610,10 +634,7 @@ console.log('in swap ', col1 + ' with ' + col2);
     // Hook up interactions
     _this.svg.selectAll('.parallel-column-data')
       .on('mouseover', function(d, idx) {
-        _this.svg.selectAll('.' + d.id).style({
-          stroke: '#FF8800',
-          'stroke-width': 2
-        });
+        _this.highlight(d.id);
 
         _this.svg.append('text')
           .attr('class', 'debug')
@@ -630,11 +651,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
       })
       .on('mouseout', function(d, idx) {
-        _this.svg.selectAll('.' + d.id).style({
-          stroke: config.defaultPathColour,
-          'stroke-width': 1
-        });
-
+        _this.resetHighlight(d.id);
         _this.svg.selectAll('.debug').remove();
       });
 
@@ -646,10 +663,7 @@ console.log('in swap ', col1 + ' with ' + col2);
         var classes = d3.select(this).attr('class').split(' ');
 
         classes.forEach(function(c, idx) {
-          _this.svg.selectAll('.' + c).style({
-            stroke: '#FF8800',
-            'stroke-width': 2
-          });
+          _this.highlight(c);
 
           _this.svg.append('text')
             .attr('class', 'debug')
@@ -672,11 +686,8 @@ console.log('in swap ', col1 + ' with ' + col2);
         var classes = d3.select(this).attr('class').split(' ');
 
         classes.forEach(function(c, idx) {
-          _this.svg.selectAll('.' + c).style({
-            stroke: config.defaultPathColour,
-            'stroke-width': 1
-          });
-        })
+          _this.resetHighlight(c);
+        });
 
         _this.svg.selectAll('.debug').remove();
       });
@@ -700,7 +711,7 @@ console.log('in swap ', col1 + ' with ' + col2);
 
         if (_this.shiftKey == false) {
           if (realIndex > 0) {
-            _this.swapColumn(realIndex);
+            _this.swapColumn(realIndex, realIndex-1);
           }
         } else {
           _this.reverseColumnOrder(realIndex);
