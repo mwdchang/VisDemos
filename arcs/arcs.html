@@ -1,0 +1,32 @@
+<html>
+<head>
+<script src="d3.js" charset="utf-8"></script>
+<script src="lodash.js"></script>
+<script src="arcs.js"></script>
+</head>
+<body>
+<div id="canvas"></div>
+</body>
+<script>
+var data = [
+   [{group: '1', value: 40}],
+   [{group: '2', value: 80}],
+   [{group: '3', value: 40}],
+   [{group: '3', value: 60}, {group: '2', value: 60}],
+   [{group: '1', value: 40}, {group: '2', value: 40}],
+   [{group: '1', value: 40}, {group: '3', value: 40}],
+   [{group: '3', value: 20}, {group: '1', value: 20}, {group: '2', value: 20}],
+   [{group: '3', value: 40}, {group: '1', value: 40}, {group: '4', value: 40}]
+];
+
+var config = {
+  width: 650
+};
+
+
+var arcs = new dcc.Arcs(data, config);
+
+arcs.render(d3.select('#canvas').node());
+
+</script>
+</html>
