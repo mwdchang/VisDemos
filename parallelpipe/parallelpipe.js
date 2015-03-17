@@ -43,7 +43,7 @@
       margin: 5,
       paddingTop: 5,
       paddingBottom: 20,
-      paddingLeft: 45,
+      paddingLeft: 55,
       paddingRight: 5,
 
       //histogramHeight: 40,
@@ -59,6 +59,10 @@
       defaultPathColour: '#888888',
       defaultBarOutlineColour: '#888888',
       defaultBarColour: '#888888',
+
+      // Animation, in millis
+      swapDuration: 1200,
+      reverseDuration: 1200,
 
 
       // Callback
@@ -306,6 +310,12 @@
         'stroke': _this.getColour(seriesName),
         'stroke-width': 3
       });
+
+    _this.svg.selectAll('text').filter('.'+seriesName)
+      .style({
+        'fill': _this.getColour(seriesName)
+      });
+
   };
 
 
@@ -318,6 +328,12 @@
         'stroke': config.defaultPathColour,
         'stroke-width':  1
       });
+
+    _this.svg.selectAll('text').filter('.'+seriesName)
+      .style({
+        'fill': ''
+      });
+
   };
 
 
@@ -327,12 +343,10 @@
     var config = _this.config;
 
     var name = _this.data[idx].name;
-    var duration = 1200;
 
     if (_this.data[idx].type !== 'ranked') {
       return;
     }
-
 
     _this.data[idx].data.reverse();
     _this.computeLayout();
@@ -341,7 +355,7 @@
     _this.chart.selectAll('.parallel-column').filter('.' + name)
       .selectAll('.inner')
       .transition()
-      .duration(duration)
+      .duration(config.reverseDuration)
       .attr('y', function(d, i) {
         return d.by;
       });
@@ -349,14 +363,14 @@
     _this.chart.selectAll('.parallel-column').filter('.' + name)
       .selectAll('.outer')
       .transition()
-      .duration(duration)
+      .duration(config.reverseDuration)
       .attr('y', function(d, i) {
         return d.by;
       });
 
     d3.selectAll('path')
       .transition()
-      .duration(duration)
+      .duration(config.reverseDuration)
       .attr('d', function(d) {
         return _this.diagonal2(d.diagonalData);
       });
@@ -389,15 +403,12 @@ console.log('in swap ', col1 + ' with ' + col2);
       }).attr('transform'));
 
 
-    var tDuration = 1200;
-
-
     _this.chart.selectAll('.parallel-column')
       .filter(function(d) {
         return d.name === col2;
       })
       .transition()
-      .duration(tDuration)
+      .duration(config.swapDuration)
       .attr('transform', function(d) {
         return _this.translate(trans1.translate[0], trans1.translate[1]);
       });
@@ -407,7 +418,7 @@ console.log('in swap ', col1 + ' with ' + col2);
         return d.name === col1;
       })
       .transition()
-      .duration(tDuration)
+      .duration(config.swapDuration)
       .attr('transform', function(d) {
         return _this.translate(trans2.translate[0], trans2.translate[1]);
       });
@@ -426,7 +437,7 @@ console.log('in swap ', col1 + ' with ' + col2);
     };
     d3.selectAll('path')
       .transition()
-      .duration(tDuration)
+      .duration(config.swapDuration)
       .attr('d', function(d) {
         return _this.diagonal2(d.diagonalData);
       });
@@ -678,11 +689,22 @@ console.log('in swap ', col1 + ' with ' + col2);
       .data(_this.series)
       .enter()
       .append('text')
-      .classed('series-label', true)
-      .attr('transform', function(d, i) {
-         return _this.translate(5, 13 + config.paddingTop + hist + i*s);
+      .attr('class', function(d) {
+        return d + ' ' + 'series-label';
       })
-      .text(function(d) { return d; });
+      .attr('transform', function(d, i) {
+        return _this.translate(1, config.barHeight + config.paddingTop + hist + i*s);
+      })
+      .attr('font-size', function(d) {
+        return config.barHeight * 0.75;
+      })
+      .text(function(d) { return d; })
+      .on('mouseover', function(d) {
+        _this.highlight(d);
+      })
+      .on('mouseout', function(d) {
+        _this.resetHighlight(d);
+      });
   };
 
 
