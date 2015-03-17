@@ -19,6 +19,7 @@
 *  - highlight
 *  - resetHighlight
 *  - query
+*  - resetAll
 *
 * note: computeLinks and computeLayout must be called before any rendering
 *
@@ -316,6 +317,14 @@
         'fill': _this.getColour(seriesName)
       });
 
+  };
+
+
+  ParallelPipe.prototype.resetAll = function() {
+    var _this = this;
+    _this.series.forEach(function(seriesName) {
+      _this.resetHighlight(seriesName); 
+    });
   };
 
 
