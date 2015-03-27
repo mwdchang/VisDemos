@@ -212,6 +212,27 @@
 
       // Ab-initio
       if (columnIdx === 0) {
+
+        // Shadow
+        _this.links.selectAll('.' + _this.data[0].name + '-shadow-path')
+          .data(_this.data[0].data)
+          .enter()
+          .append('path')
+          .attr('class', function(d) {
+            return _this.data[0].name + ' ' +
+              'shadow' + ' ' +
+              _this.data[0].name + '-shadow-path';
+          })
+          .attr('d', function(d) {
+            return _this.diagonal2(d.diagonalData);
+          })
+          .style({
+            'fill': 'none',
+            'stroke': '#FFF',
+            'stroke-width': 11
+          });
+
+
         _this.links.selectAll('.' + _this.data[0].name + '-path')
           .data(_this.data[0].data)
           .enter()
@@ -230,6 +251,26 @@
             'stroke-width': 1
           });
       } else {
+
+        // Shadow
+        _this.links.selectAll('.' + _this.data[columnIdx].name + '-shadow-path')
+          .data(_this.data[columnIdx].data)
+          .enter()
+          .append('path')
+          .attr('class', function(d) {
+            return _this.data[columnIdx].name + ' ' +
+              'shadow' + ' ' + 
+              _this.data[columnIdx].name + '-shadow-path';
+          })
+          .attr('d', function(d) {
+            return _this.diagonal2(d.diagonalData);
+          })
+          .style({
+            'fill': 'none',
+            'stroke': '#FFF',
+            'stroke-width': 11 
+          });
+
         _this.links.selectAll('.' + _this.data[columnIdx].name + '-path')
           .data(_this.data[columnIdx].data)
           .enter()
@@ -758,6 +799,15 @@ console.log('in swap ', col1 + ' with ' + col2);
     var config = _this.config;
 
     // Hook up interactions
+    _this.svg.selectAll('.shadow')
+      .on('mouseover', function(d, idx) {
+        _this.highlight(d.id);
+      })
+      .on('mouseout', function(d, idx) {
+        _this.resetHighlight(d.id);
+      });
+
+
     _this.svg.selectAll('.parallel-column-data')
       .on('mouseover', function(d, idx) {
         _this.highlight(d.id);

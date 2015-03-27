@@ -19,7 +19,7 @@ Shift+Click on a ranked column to sort <br>
 <div id="parallel"></div>
 <style>
 body {
-   background-color: #F8F8F8;
+   background-color: #FFFFFF;
    margin: 2rem;
    font-family: Tahoma;
    font-size: 0.6rem;
@@ -68,6 +68,7 @@ var data = [
    ]},
 
   
+   /*
    {'name':'Site',
     'type': 'categorical',
     'value': 0,
@@ -78,6 +79,7 @@ var data = [
       {id: 'Proj04', value: 'B'},
       {id: 'Proj05', value: 'D'}
    ]},
+   */
 
 
    {'name': 'Donors',
@@ -118,6 +120,7 @@ var data = [
 ];
 
 
+
 /*
 var data = [
    {'name': 'Mutations',
@@ -146,7 +149,7 @@ var data = [
       {id: 'Proj20', value: 400}
 
    ]},
-   {'name': 'H Mutations',
+   {'name': 'Donors',
     'value': 0,
     'type': 'numeric',
     'data': [
@@ -200,6 +203,7 @@ var data = [
    ]}
 ];
 */
+
 
 
 var parallel = new dcc.ParallelPipe(data, null);
