@@ -1,5 +1,3 @@
-
-
 (function() {
   'use strict';
 
@@ -23,8 +21,8 @@
       paddingRight: 5,
 
       // Mark settings
-      groupHeight: 35,
-      groupPadding: 30,
+      groupHeight: 25,
+      groupPadding: 10,
       segmentPadding: 3
     }
 
@@ -254,16 +252,21 @@
       })
       .style({
         'fill': '#888888',
-        'stroke': '#666666'
+        'stroke': '#666666',
+        'opacity': 0.6
       })
       .each(function(d, i) {
         var groupNode = this.parentNode;
         
         // Render label
         d3.select(groupNode).append('text')
+          .datum(d)
+          .attr('class', 'arc-label')
           .attr('x', d.startX)
-          .attr('y', 90)
-          .text('Set ' + d.groupId);
+          .attr('y', config.yAnchor + config.groupHeight + 15)
+          .text('Set ' + d.groupId)
+          .on('mouseover', mouseoverGroup)
+          .on('mouseout', mouseoutGroup); 
     
         
         // Render subgroups
@@ -280,7 +283,7 @@
             .style({
               'fill': fillColour(+ d.groupId),
               'stroke': '#000',
-              'opacity': '0.33'
+              'opacity': '0.50'
             })
             .on('mouseover', function() {
               mouseover(segment.subGroupId);
@@ -320,6 +323,10 @@
         return 'data-link subgroup-' + d.subGroupId;
       })
       .attr('transform', function(d, i) {
+        var x = d.offsetX;
+        var y = config.yAnchor; 
+        return _this.translate(x, y);
+        /*
         if (i % 2 == 0) {
           var x = d.offsetX;
           var y = config.yAnchor + config.groupHeight;
@@ -328,11 +335,14 @@
           var x = d.offsetX;
           var y = config.yAnchor; 
           return _this.translate(x, y);
-        }
+        }*/
       })
       .attr('d', function(d, i) {
         var points = d3.range(0, 10);
-
+        radians2.domain([0, points.length -1]);
+        arc2.radius(d.radius);
+        return arc2(points);
+        /*
         if (i % 2 == 0) {
           radians.domain([0, points.length -1]);
           arc.radius(d.radius);
@@ -342,23 +352,24 @@
           arc2.radius(d.radius);
           return arc2(points);
         }
-
+        */
 
       })
       .style({
         'fill': 'none',
         'stroke': '#888888',
-        'stroke-width': '3',
+        'stroke-width': '1.5',
         'opacity': 0.33
       });
-
   };
 
 
+  /**
+   * Render entry point
+   */
   Arcs.prototype.render = function(element) {
     var _this = this;
     var config = _this.config;
-    console.log('confog', config);
     _this.element = element;
 
     // FIXME: use viewport/viewbox
@@ -374,5 +385,41 @@
   };
 
 
+  function mouseoverGroup(group) {
+    d3.selectAll('.subgroup').style('opacity', 0.1);
+    d3.selectAll('.data-link').style('opacity', 0.1);
+    group.segments.forEach(function(segment) {
+      var subGroupId = '.subgroup-' + segment.subGroupId; 
+      d3.selectAll(subGroupId).style('opacity', 1.0);
+    });
+  }
+
+  function mouseoutGroup(group) {
+    d3.selectAll('.subgroup').style('opacity', 0.5);
+    d3.selectAll('.data-link').style('opacity', 0.33);
+  }
+
+  function mouseover(subGroupId) {
+    var selection = '.subgroup-' + subGroupId;
+
+    d3.selectAll('.subgroup').style('opacity', 0.1);
+    d3.selectAll('.data-link').style('opacity', 0.1);
+
+    d3.selectAll(selection).style('opacity', 1.0);
+  
+  }
+  
+  function mouseout(subGroupId) {
+    var selection = '.subgroup-' + subGroupId;
+
+    d3.selectAll('.subgroup').style('opacity', 0.5);
+    d3.selectAll('.data-link').style('opacity', 0.33);
+
+    d3.selectAll('.subgroup').selectAll(selection).style('opacity', 0.50);
+    d3.selectAll('.data-link').selectAll(selection).style('opacity', 0.33);
+  }
+
+
+  // Assign
   dcc.Arcs = Arcs; 
 })();

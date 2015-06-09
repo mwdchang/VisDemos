@@ -3,24 +3,50 @@
 <script src="d3.js" charset="utf-8"></script>
 <script src="lodash.js"></script>
 <script src="arcs.js"></script>
+<style>
+body {
+   margin: 1rem;
+   font-family: Tahoma;
+}
+
+.ramble {
+   border: 1px solid #CCC;
+   border-radius: 0.75rem;
+   font-size: 0.8rem;
+   background-color: #DDD;
+   padding: 0.5rem;
+}
+
+.arc-label {
+   font-size: 0.85rem;
+}
+
+</style>
 </head>
 <body>
+<div class="ramble">
+Alternate view of set intersections. <br>
+Common subsets are connected by links. The size of each subset is relative to its horizontal width. 
+</div>
 <div id="canvas"></div>
 </body>
 <script>
 var data = [
-   [{group: '1', value: 40}],
+   [{group: '1', value: 140}],
    [{group: '2', value: 80}],
    [{group: '3', value: 40}],
    [{group: '3', value: 60}, {group: '2', value: 60}],
    [{group: '1', value: 40}, {group: '2', value: 40}],
    [{group: '1', value: 40}, {group: '3', value: 40}],
    [{group: '3', value: 20}, {group: '1', value: 20}, {group: '2', value: 20}],
-   [{group: '3', value: 40}, {group: '1', value: 40}, {group: '4', value: 40}]
+   [{group: '3', value: 40}, {group: '1', value: 40}, {group: '4', value: 40}],
+   //[{group: '4', value: 40}, {group: '5', value: 40}],
+   [{group: '1', value: 40}, {group: '5', value: 40}],
+   [{group: '1', value: 40}, {group: '6', value: 40}]
 ];
 
 var config = {
-  width: 650
+  width: 900
 };
 
 
