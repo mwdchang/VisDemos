@@ -1,0 +1,126 @@
+<html data-ng-app="ICGCPlotter">
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset="utf-8"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.9.3/lodash.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.6.3/d3-tip.min.js"></script>
+<link rel="stylesheet" href="//rawgithub.com/Caged/d3-tip/master/examples/example-styles.css">
+<style>
+body {
+   margin: 0.5rem;
+   font-family: Tahoma;
+   font-size: 0.8rem;
+}
+select {
+   margin-left: 0.5rem;
+   margin-top: 0.5rem;
+}
+</style>
+</head>    
+<body data-ng-controller="Plotter">
+   <label>Dimension 1</label><select ng-options="item for item in dimensions" data-ng-model="dim1" data-ng-change="update()"></select>
+   <br>
+   <label>Dimension 2</label><select ng-options="item for item in dimensions" data-ng-model="dim2" data-ng-change="update()"></select>
+   <br>
+   <br>
+   <br>
+   <svg id="canvas" width="1200" height="3000"></svg>
+</body>
+<script>
+
+var app = angular.module('ICGCPlotter', []);
+var stash = {};
+var tip = d3.tip().attr('class', 'd3-tip').html(function(d) { return d.term + ': ' + d.count; });
+
+function buildDonorQuery(filters) {
+  var donorQ = 'https://dcc.icgc.org/api/v1/donors?';
+  return donorQ + 'size=0&include=facets&filters=' + angular.toJson(filters);
+}
+
+function render(term1, maxCount, facet, terms, idx) {
+  var group = d3.select('#canvas').append('g').attr('transform', 'translate(40, ' + idx*150 + ')');
+  var yMax = 140;
+  var factor = 1.0;
+
+  // Jus guessing here
+  if (facet === 'projectId') factor = 0.10;
+  if (facet === 'primarySite') factor = 0.10;
+  if (facet === 'ageAtDiagnosisGroup') factor = 0.05;
+
+
+  group.append('text')
+    .attr('x', 10)
+    .attr('y', 20)
+    .text(term1 + ' - ' + facet );
+
+  group.call(tip);
+
+  group.selectAll('.bars')
+    .data(terms)
+    .enter()
+    .append('rect')
+    .attr('class', 'bars')
+    .attr('x', function(d, i) { return i*18; })
+    .attr('y', function(d) { return yMax - d.count*factor; })
+    .attr('width', 17)
+    .attr('height', function(d) { return d.count*factor; })
+    .style('fill', '#336699')
+    .on('mouseover', tip.show)
+    .on('mouseout', tip.hide);
+}
+
+function buildGraph(facet, term, maxCount, dim2, idx) {
+  var filters = {donor: {}};
+  filters.donor[facet] = {is: [term]};
+  var queryStr = buildDonorQuery(filters);
+
+  d3.json(queryStr, function(data) {
+
+    // Blank fill where needed
+    stash[dim2].terms.forEach(function(t) {
+      if (! _.some(data.facets[dim2].terms, function(x) { return x.term === t.term; })) {
+        data.facets[dim2].terms.push({
+          term: t.term,
+          count: 0
+        });
+      }
+    });
+
+    var terms = _.sortBy(data.facets[dim2].terms, function(s) { return s.term; });
+
+    console.log(_.pluck(terms, 'term'));
+
+
+    render(term, maxCount, dim2, terms, idx);
+  });
+}
+
+function refresh(dim1, dim2) {
+  d3.select('#canvas').selectAll('*').remove();
+
+  // var terms = _.pluck(stash[dim1].terms, 'term');
+  var terms = stash[dim1].terms;
+  terms.forEach(function(term, idx) {
+    buildGraph(dim1, term.term, terms[0].count, dim2, idx);
+  });
+}
+
+app.controller("Plotter", function($scope) {
+  
+  $scope.dimensions = ['gender', 'vitalStatus', 'diseaseStatusLastFollowup', 'ageAtDiagnosisGroup', 'projectId', 'primarySite'];
+  $scope.dim1 = 'vitalStatus';
+  $scope.dim2 = 'primarySite';
+
+  $scope.update = function() {
+    refresh($scope.dim1, $scope.dim2);
+  };
+
+  d3.json( buildDonorQuery({}), function(data) {
+    stash = data.facets;
+    refresh($scope.dim1, $scope.dim2);
+  });
+
+});
+
+</script>
+</html>
