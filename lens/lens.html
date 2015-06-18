@@ -1,0 +1,159 @@
+<html>
+<head>
+<script src="d3.js" charset="utf-8"></script>
+<script src="lodash.js"></script>
+<style>
+body {
+   margin: 1rem;
+}
+</style>
+</head>
+<body>
+<svg id="canvas" width="800" height="800"></svg>
+</body>
+<script>
+
+var svg = d3.select('#canvas');
+var group = svg.append('g').attr('transform', 'translate(100, 100)');
+var lensData = {
+   x: 100,
+   y: 100
+};
+
+var points = [];
+var selected = [];
+var lensRadius = 50;
+
+// Draw a border
+group.append('rect')
+  .attr('x', 1)
+  .attr('y', 1)
+  .attr('width', 298)
+  .attr('height', 298)
+  .style('stroke', '#CCC')
+  .style('fill', '#FFF');
+
+
+// Randomize data points
+for (var i=0; i < 80; i++) {
+  points.push({
+    id: 'p'+i,
+    x: Math.random()*280 + 10,
+    y: Math.random()*280 + 10,
+    value: Math.random()*100
+  });
+}
+
+// Render
+group.selectAll('.points')
+  .data(points)
+  .enter()
+  .append('circle')
+  .classed('points', true)
+  .attr('cx', function(d) { return d.x;})
+  .attr('cy', function(d) { return d.y;})
+  .attr('r', 3)
+  .style('fill', '#CCC');
+
+
+// Len action
+var lensDrag = d3.behavior.drag()
+  .origin(function(d) {
+    return {x: d.x, y: d.y};
+  })
+  .on('drag', function(d) {
+    d3.select(this).style('stroke-width', 5);
+    d3.select(this).style('stroke', '#7BF');
+
+    var coord = d3.mouse(this);
+    d3.select(this).attr('cx', coord[0]).attr('cy', coord[1]);
+    d.x = coord[0];
+    d.y = coord[1];
+
+    selected = [];
+    d3.selectAll('.points')
+      .style('fill', function(p) {
+        var dist = Math.sqrt( (p.x-d.x)*(p.x-d.x) + (p.y-d.y)*(p.y-d.y));
+        if (dist < lensRadius) {
+          selected.push(p);
+          return '#F20';
+        } else {
+          return '#CCC';
+        }
+      });
+    
+    renderLabels();
+
+  })
+  .on('dragend', function(d) {
+     d3.select(this).style('stroke-width', 2);
+     d3.select(this).style('stroke', '#222');
+  });
+
+
+
+function _line(x1, y1, x2, y2) {
+  return 'M' + x1 + ',' + y1 + 'L' + x2 + ',' + y2;
+}
+
+
+function renderLabels() {
+  if (_.isEmpty(selected)) return;
+  group.selectAll('.label').remove();
+
+  var startY = lensData.y - 50;
+  var h = 15;
+
+  // Y-sort
+  selected = _.sortBy(selected, function(d) { return d.y; });
+
+
+  selected.forEach(function(d, idx) {
+    group.append('svg:path')
+      .classed('label', true)
+      .attr('d', _line(d.x, d.y, lensData.x+100, d.y))
+      .style('stroke', '#AAA');
+
+    group.append('svg:path')
+      .classed('label', true)
+      .attr('d', _line(lensData.x+100, d.y, lensData.x+150, startY + idx*h)) 
+      .style('stroke', '#AAA');
+
+    group.append('svg:path')
+      .classed('label', true)
+      .attr('d', _line(lensData.x+150, startY + idx*h, lensData.x+165, startY + idx*h)) 
+      .style('stroke', '#AAA');
+
+    group.append('svg:rect')
+      .classed('label', true)
+      .attr('x', lensData.x+165)
+      .attr('y', startY + idx*h - 0.5*h)
+      .attr('width', d.value)
+      .attr('height', h-2)
+      .style('fill', '#58B');
+
+
+
+  });
+
+  
+}
+
+
+// Render the lens
+var lens = group.append('circle')
+  .datum(lensData)
+  .attr('cx', 100)
+  .attr('cy', 100)
+  .attr('r', lensRadius)
+  .style('stroke', '#222')
+  .style('stroke-width', 2)
+  .style('fill-opacity', 0.2)
+  .style('fill', '#9BC')
+  .call(lensDrag);
+
+
+
+
+</script>
+</html>
