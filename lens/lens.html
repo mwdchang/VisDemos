@@ -9,6 +9,10 @@ body {
 </style>
 </head>
 <body>
+<pre>
+Drag the lens over data points to see hidden attributes. Hover over the
+the resulting histogram to isolate a specific data point.
+</pre>
 <svg id="canvas" width="800" height="800"></svg>
 </body>
 <script>
@@ -40,7 +44,8 @@ for (var i=0; i < 80; i++) {
     id: 'p'+i,
     x: Math.random()*280 + 10,
     y: Math.random()*280 + 10,
-    value: Math.random()*100
+    size: Math.random()*5 + 1,
+    value: Math.random()*100 + 5
   });
 }
 
@@ -49,10 +54,13 @@ group.selectAll('.points')
   .data(points)
   .enter()
   .append('circle')
+  .attr('class', function(d, i) { return 'p' + i; })
   .classed('points', true)
   .attr('cx', function(d) { return d.x;})
   .attr('cy', function(d) { return d.y;})
-  .attr('r', 3)
+  .attr('r', function(d) { return d.size; })
+  .style('stroke', '#AAA')
+  .style('opacity', 0.75)
   .style('fill', '#CCC');
 
 
@@ -111,32 +119,51 @@ function renderLabels() {
   selected.forEach(function(d, idx) {
     group.append('svg:path')
       .classed('label', true)
+      .classed(d.id, true)
       .attr('d', _line(d.x, d.y, lensData.x+100, d.y))
       .style('stroke', '#AAA');
 
     group.append('svg:path')
       .classed('label', true)
+      .classed(d.id, true)
       .attr('d', _line(lensData.x+100, d.y, lensData.x+150, startY + idx*h)) 
       .style('stroke', '#AAA');
 
     group.append('svg:path')
       .classed('label', true)
+      .classed(d.id, true)
       .attr('d', _line(lensData.x+150, startY + idx*h, lensData.x+165, startY + idx*h)) 
       .style('stroke', '#AAA');
 
     group.append('svg:rect')
       .classed('label', true)
+      .classed(d.id, true)
       .attr('x', lensData.x+165)
-      .attr('y', startY + idx*h - 0.5*h)
+      .attr('y', startY + idx*h - 0.5*h +1)
       .attr('width', d.value)
       .attr('height', h-2)
-      .style('fill', '#58B');
+      .style('fill', '#58B')
+      .on('mouseover', function() {
+        var pid = d.id;
 
+        d3.selectAll('.points')
+          .filter(function(d) {
+            return d3.select(this).classed(pid) === false;
+          })
+          .style('opacity', 0.2);
+
+        d3.selectAll('path, rect')
+          .filter(function(d) {
+            return d3.select(this).classed(pid) === false;
+          })
+          .style('opacity', 0.2);
+      })
+      .on('mouseout', function() {
+        d3.selectAll('.points, path, rect').style('opacity', 1.0);
+      });
 
 
   });
-
-  
 }
 
 
@@ -150,6 +177,9 @@ var lens = group.append('circle')
   .style('stroke-width', 2)
   .style('fill-opacity', 0.2)
   .style('fill', '#9BC')
+  .on('dblclick', function(d) {
+    console.log('double clicked');
+  })
   .call(lensDrag);
 
 
