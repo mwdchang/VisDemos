@@ -1,10 +1,16 @@
 <html>
 <head>
+<!--
 <script src="d3.js" charset="utf-8"></script>
 <script src="lodash.js"></script>
+-->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.9.3/lodash.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset="utf-8"></script>
 <style>
 body {
    margin: 1rem;
+   font-family: Tahoma;
 }
 </style>
 </head>
@@ -45,7 +51,7 @@ for (var i=0; i < 80; i++) {
     x: Math.random()*280 + 10,
     y: Math.random()*280 + 10,
     size: Math.random()*5 + 1,
-    value: Math.random()*100 + 5
+    value: Math.floor(Math.random()*100) + 5
   });
 }
 
@@ -146,21 +152,25 @@ function renderLabels() {
       .on('mouseover', function() {
         var pid = d.id;
 
-        d3.selectAll('.points')
+        d3.selectAll('path, rect, .points')
           .filter(function(d) {
             return d3.select(this).classed(pid) === false;
           })
-          .style('opacity', 0.2);
-
-        d3.selectAll('path, rect')
-          .filter(function(d) {
-            return d3.select(this).classed(pid) === false;
-          })
-          .style('opacity', 0.2);
+          .style('opacity', 0.12);
       })
       .on('mouseout', function() {
         d3.selectAll('.points, path, rect').style('opacity', 1.0);
       });
+      
+    group.append('svg:text')
+      .classed('label', true)
+      .classed(d.id, true)
+      .attr('x', lensData.x+165 + d.value + 5)
+      .attr('y', startY + idx*h + 4)
+      .style('font-size', 10)
+      .style('fill', '#888')
+      .text(d.value);
+
 
 
   });
@@ -177,6 +187,7 @@ var lens = group.append('circle')
   .style('stroke-width', 2)
   .style('fill-opacity', 0.2)
   .style('fill', '#9BC')
+  .style('cursor', 'move')
   .on('dblclick', function(d) {
     console.log('double clicked');
   })
