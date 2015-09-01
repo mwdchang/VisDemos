@@ -21,26 +21,34 @@
 <body>
     <div class="tile" id="clock1"></div>
     <div class="tile" id="clock2"></div>
+    <div class="tile" id="clock3"></div>
 </body>
 <script>
 var clock1 = new ArcClock();
 clock1.render('#clock1');
 
 var clock2 = new ArcClock({
-  hourColour: '#336600',
-  minuteColour: '#666600',
-  waveColour: '#551100',
-  hourInner: 180,
-  hourOuter: 250,
-  minuteInner: 260,
-  minuteOuter: 280,
-  waveInner: 20,
-  waveOuter: 90,
-  waves: 4.0,
-  showSecond: false,
-  showCenter: false
+  hourStyle: 'ARC',
+  minuteStyle: 'ARC',
+  secondStyle: 'ARC',
+  showCenter: true,
+  showWave: false
 });
 clock2.render('#clock2');
+
+
+var clock3 = new ArcClock({
+  hourStyle: 'TICK',
+  minuteStyle: 'ENCLOSURE',
+  secondStyle: 'ARC',
+  showCenter: true,
+  showWave: true,
+  waves: 11.25,
+  waveInner: 210,
+  waveOuter: 300
+});
+clock3.render('#clock3');
+
 
 </script>
 </html>

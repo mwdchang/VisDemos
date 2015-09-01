@@ -3,7 +3,8 @@
 
 var ArcClock = function(config) {
   var defaultConfig = {
-    // Radii
+
+    // Distances, calculated as units away from the center
     centerRadius: 90,
     hourInner: 100,
     hourOuter: 120,
@@ -13,6 +14,7 @@ var ArcClock = function(config) {
     secondOuter: 200,
     waveInner: 220,
     waveOuter: 240,
+    waveHeight: 35,
 
     // Visibility
     showHour: true,
@@ -46,7 +48,25 @@ var ArcClock = function(config) {
     }
   });
 
+
   this.config = config;
+
+  // Might as well figure out the actual dimension since they won't change
+  var max = d3.max([
+    config.centerRadius,
+    config.hourInner,
+    config.hourOuter,
+    config.minuteInner,
+    config.minuteOuter,
+    config.secondInner,
+    config.secondOuter,
+    config.waveInner + config.waveHeight,
+    config.waveOuter + config.waveHeight
+  ])
+
+  this.width = 2.0 * max + 0.15*max;
+  this.height = 2.0 * max + 0.15*max;
+
 };
 
 
@@ -54,15 +74,13 @@ ArcClock.prototype.render = function(id) {
   var svg, center;
   var arcSecond, arcMinute, arcHour;
   var config = this.config;
-  var width = 750;
-  var height = 750;
 
 
   svg = d3.select(id).append('svg')
-    .attr('viewBox', '0 0 ' + width + ' ' + height)
+    .attr('viewBox', '0 0 ' + this.width + ' ' + this.height)
     .attr('preserveAspectRatio', 'xMidYMid')
     .append('g')
-    .attr('transform', 'translate(' + 0.5*width+ ',' + 0.5*height+ ')');
+    .attr('transform', 'translate(' + 0.5*this.width+ ',' + 0.5*this.height+ ')');
 
   center =  svg.append('g');
 
@@ -110,11 +128,12 @@ ArcClock.prototype.render = function(id) {
   }
 
   function renderWave() {
+
     for (var i=0; i < 60; i++) {
       var _secodnStart = seconds2Radians(i);
       var arc = d3.svg.arc()
         .innerRadius(config.waveInner)
-        .outerRadius(config.waveOuter + 35*Math.abs(Math.cos(Math.PI*i/ (60/config.waves) ) ))
+        .outerRadius(config.waveOuter + config.waveHeight*Math.abs(Math.cos(Math.PI*i/ (60/config.waves) ) ))
         .startAngle( seconds2Radians( (i-0.43)%60))
         .endAngle( seconds2Radians( (i+0.43)%60));
 
@@ -144,9 +163,12 @@ ArcClock.prototype.render = function(id) {
         if (style === 'ARC') {
           d.statAngle = 0;
           d.endAngle = interpolator(t);
-        } else {
+        } else if (style == 'ENCLOSURE') {
           d.startAngle = interpolator(t) + gap;
           d.endAngle = interpolator(t) + 2*Math.PI - gap;
+        } else {
+          d.startAngle = interpolator(t);
+          d.endAngle = interpolator(t) + 2*gap;
         }
 
         if (type === 'H') return arcHour(d);
@@ -161,6 +183,11 @@ ArcClock.prototype.render = function(id) {
     var _seconds = now.getSeconds();
     var _minutes = now.getMinutes();
     var _hours = now.getHours() % 12;
+
+    if (_seconds === 0) _seconds += 0.001;
+    if (_minutes === 0) _minutes += 0.00001;
+    if (_hours === 0) _hours += 0.0000001;
+
     var _secondsStart = seconds2Radians((_seconds-1)%60);
     var _minutesStart = minutes2Radians(_minutes*60 + _seconds);
     var _hoursStart = hours2Radians(_hours * 60*60 + _minutes*60 + _seconds);
@@ -203,10 +230,6 @@ ArcClock.prototype.render = function(id) {
     } else {
       svg.selectAll('.sec').style('visibility', 'hidden');
     }
-
-
-
-
 
     seconds.transition().duration(300)
       .call(arcTween, _secondsStart, 'S', config.secondStyle);
