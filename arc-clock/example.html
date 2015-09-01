@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Arc Clock Excample</title>
+<script src="d3.js" charset="utf-8"></script>
+<script src="aclock.js"></script>
+<style>
+  section {
+    display: block;
+  }
+
+  .tile {
+    display:inline-block;
+    width:400px;
+    height:400px;
+    border: 2px solid #CCC;
+  }
+</style>
+</head>
+<body>
+    <div class="tile" id="clock1"></div>
+    <div class="tile" id="clock2"></div>
+</body>
+<script>
+var clock1 = new ArcClock();
+clock1.render('#clock1');
+
+var clock2 = new ArcClock({
+  hourColour: '#336600',
+  minuteColour: '#666600',
+  waveColour: '#551100',
+  hourInner: 180,
+  hourOuter: 250,
+  minuteInner: 260,
+  minuteOuter: 280,
+  waveInner: 20,
+  waveOuter: 90,
+  waves: 4.0,
+  showSecond: false,
+  showCenter: false
+});
+clock2.render('#clock2');
+
+</script>
+</html>
