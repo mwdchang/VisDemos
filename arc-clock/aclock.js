@@ -21,6 +21,11 @@ var ArcClock = function(config) {
     showWave: true,
     showCenter: true,
 
+    // Style
+    hourStyle: 'ENCLOSURE',
+    minuteStyle: 'ENCLOSURE',
+    secondStyle: 'ENCLOSURE',
+
     // Colour
     centerColour: '#333',
     centerTextColour: '#DDD',
@@ -121,37 +126,31 @@ ArcClock.prototype.render = function(id) {
   }
 
 
-  function arcTweenH(transition, hoursStart) {
+  function arcTween(transition, start, type, style) {
     transition.attrTween('d', function(d) {
-      var interpolateStart = d3.interpolate(hoursStart, hoursStart + hours2Radians(1));
+      var interpolator, gap;
+      if (type === 'H') {
+        interpolator = d3.interpolate(start, start + hours2Radians(1));
+        gap = hours2Radians(60*30);
+      } else if (type === 'M')  {
+        interpolator = d3.interpolate(start, start + minutes2Radians(1));
+        gap = minutes2Radians(30);
+      } else if (type === 'S') {
+        interpolator = d3.interpolate(start, start + seconds2Radians(1));
+        gap = seconds2Radians(0.5);
+      }
 
       return function(t) {
-        d.startAngle = interpolateStart(t) + hours2Radians(20*60);  // inc 1/2 hour
-        d.endAngle = interpolateStart(t) + 2*Math.PI - hours2Radians(20*60);
-        return arcHour(d);
-      };
-    });
-  }
+        if (style === 'ARC') {
+          d.statAngle = 0;
+          d.endAngle = interpolator(t);
+        } else {
+          d.startAngle = interpolator(t) + gap;
+          d.endAngle = interpolator(t) + 2*Math.PI - gap;
+        }
 
-  function arcTweenM(transition, minutesStart) {
-    transition.attrTween('d', function(d) {
-
-      var interpolateStart = d3.interpolate(minutesStart, minutesStart + minutes2Radians(1));
-      return function(t) {
-        d.startAngle = interpolateStart(t) + minutes2Radians(30);
-        d.endAngle = interpolateStart(t) + 2*Math.PI - minutes2Radians(30);
-        return arcMinute(d);
-      };
-    });
-  }
-
-  function arcTweenS(transition, secondsStart) {
-    transition.attrTween('d', function(d) {
-
-      var interpolateStart = d3.interpolate(secondsStart, secondsStart + seconds2Radians(1));
-      return function(t) {
-        d.startAngle = interpolateStart(t) + seconds2Radians(0.5);
-        d.endAngle = interpolateStart(t) + 2*Math.PI - seconds2Radians(0.5);
+        if (type === 'H') return arcHour(d);
+        if (type === "M") return arcMinute(d);
         return arcSecond(d);
       };
     });
@@ -171,9 +170,9 @@ ArcClock.prototype.render = function(id) {
       (now.getSeconds() < 10? '0' + now.getSeconds() : now.getSeconds());
 
     if (_seconds === 0) {
-      d3.selectAll('.sec').style('opacity', 0.05);
+      svg.selectAll('.sec').style('opacity', 0.05);
     }
-    d3.selectAll('.sec').filter(function(d) {
+    svg.selectAll('.sec').filter(function(d) {
       return d.val <= _seconds;
     }).transition().duration(300).style('opacity', 1.0);
 
@@ -199,16 +198,24 @@ ArcClock.prototype.render = function(id) {
       center.style('visibility', 'hidden');
     }
 
+    if (config.showWave) {
+      svg.selectAll('.sec').style('visibility', 'visible');
+    } else {
+      svg.selectAll('.sec').style('visibility', 'hidden');
+    }
+
+
+
 
 
     seconds.transition().duration(300)
-      .call(arcTweenS, _secondsStart);
+      .call(arcTween, _secondsStart, 'S', config.secondStyle);
 
     minutes.transition().duration(300)
-      .call(arcTweenM, _minutesStart);
+      .call(arcTween, _minutesStart, 'M', config.minuteStyle);
 
     hours.transition().duration(300)
-      .call(arcTweenH, _hoursStart);
+      .call(arcTween, _hoursStart, "H", config.hourStyle);
 
     center.select('text').text(dateStr);
   }
